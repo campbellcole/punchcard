@@ -18,23 +18,28 @@ If you are using stable Rust, switch `release` with `release_stable`
 
 ```
 $ punchcard --help
-Usage: punchcard [OPTIONS] <COMMAND>
+A CLI tool for tracking work-from-home hours.
+
+Usage: punchcard <COMMAND>
 
 Commands:
-  in    Clock in
-  out   Clock out
-  help  Print this message or the help of the given subcommand(s)
+  in             Clock in
+  out            Clock out
+  report         Interpret the times and generate a report
+  completions    Generate completions for the given shell
+  generate-data  Generate test data
+  help           Print this message or the help of the given subcommand(s)
 
 Options:
-  -o, --offset-from-now <OFFSET_FROM_NOW>
-          The offset from the current time to use as the clock in/out time
-  -h, --help
-          Print help
-  -V, --version
-          Print version
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
-The `-o` option is used to specify an offset from the current time.
+**NOTE: The `generate-data` command is only available with the feature flag `generate_test_data`.**
+<br />
+This flag is enabled by default but will be disabled if you use the [above commands](#compilation) to run/install this program.
+
+When using the `in` or `out` commands, the `-o` option can be used to specify an offset from the current time.
 
 Some examples of valid inputs:
 
