@@ -39,6 +39,10 @@ Options:
 <br />
 This flag is enabled by default but will be disabled if you use the [above commands](#compilation) to run/install this program.
 
+**NOTE 2: The timezone is currently hardcoded as `America/Los_Angeles`.**
+<br />
+This will be fixed in a future commit, and will use either the local timezone or a timezone provided in the `.env` file.
+
 When using the `in` or `out` commands, the `-o` option can be used to specify an offset from the current time.
 
 Some examples of valid inputs:
