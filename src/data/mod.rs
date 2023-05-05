@@ -13,7 +13,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::io;
+
+use polars::prelude::PolarsError;
+use thiserror::Error;
+
+use self::clock::EntryError;
+
 pub mod clock;
 #[cfg(feature = "generate_test_data")]
 pub mod generate;
 pub mod report;
+
+#[derive(Debug, Error)]
+pub enum CommandError {
+    #[error("Adding entry: {0}")]
+    EntryError(#[from] EntryError),
+    #[error("Data processing: {0}")]
+    PolarsError(#[from] PolarsError),
+    #[error("IO error: {0}")]
+    Io(#[from] io::Error),
+    #[error("CSV error: {0}")]
+    Csv(#[from] csv::Error),
+}
+
+pub type Result<T = ()> = std::result::Result<T, CommandError>;

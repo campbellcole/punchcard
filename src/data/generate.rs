@@ -15,7 +15,7 @@
 
 use std::{
     fs::OpenOptions,
-    io::{self, BufWriter, Write},
+    io::{BufWriter, Write},
     path::PathBuf,
 };
 
@@ -23,10 +23,7 @@ use chrono::{prelude::*, Duration};
 use clap::Args;
 use rand::prelude::*;
 
-use crate::env::CONFIG;
-
-// RFC3339 with nanoseconds, no space between ns and tz
-const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
+use crate::{env::CONFIG, DATETIME_FORMAT};
 
 #[derive(Debug, Args)]
 pub struct GenerateDataArgs {
@@ -40,7 +37,7 @@ pub struct GenerateDataArgs {
 
 pub fn generate_test_entries(
     GenerateDataArgs { count, output_file }: GenerateDataArgs,
-) -> io::Result<()> {
+) -> super::Result {
     let mut prev_time = Local::now();
     // three and a half hours
     let base_offset = Duration::seconds(60 * 30 * 7);

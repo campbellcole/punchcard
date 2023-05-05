@@ -13,9 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{fmt::Display, fs, fs::File, io, str::FromStr};
+use std::{fmt::Display, fs, fs::File, str::FromStr};
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeZone, Utc};
+use chrono_tz::OffsetName;
 use clap::Args;
 use itertools::Itertools;
 use thiserror::Error;
@@ -36,6 +37,16 @@ pub enum EntryType {
     ClockOut,
 }
 
+impl EntryType {
+    pub fn colored(&self) -> String {
+        use owo_colors::OwoColorize;
+        match self {
+            EntryType::ClockIn => "in".green().to_string(),
+            EntryType::ClockOut => "out".red().to_string(),
+        }
+    }
+}
+
 impl Display for EntryType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -49,10 +60,8 @@ impl Display for EntryType {
 pub enum EntryError {
     #[error("Already clocked {0}")]
     AlreadyClocked(String),
-    #[error("IO error: {0}")]
-    Io(#[from] io::Error),
-    #[error("CSV error: {0}")]
-    Csv(#[from] csv::Error),
+    #[error("Cannot add an entry before the latest entry at {0}")]
+    EntryBeforeLatest(String),
     // #[error("NLP error: {0}")]
     // Nlp(#[from] crate::nlp::NlpError),
 }
@@ -73,18 +82,38 @@ pub fn add_entry(
         offset_from_now,
         // nlp,
     }: ClockEntryArgs,
-) -> Result<(), EntryError> {
+) -> super::Result {
     let timestamp = {
         let now = Local::now();
-        offset_from_now.map(|offset| now + *offset).unwrap_or(now)
+        offset_from_now
+            .as_ref()
+            .map(|offset| now + **offset)
+            .unwrap_or(now)
     };
 
     let data_file = CONFIG.get_output_file();
 
-    let last_op = get_last_entry()?.map(|e| e.entry_type);
+    let last_entry = get_last_entry()?;
+
+    // currently cannot allow entries before the latest entry
+    // because that would add a lot of complexity to the code.
+    // basically trying to avoid interpreting the entire file
+    // to make sure that every in has a matching out. this
+    // logic provides the same guarantee but is much simpler.
+    match last_entry.as_ref().map(|e| e.timestamp) {
+        Some(time) if time > timestamp => {
+            return Err(EntryError::EntryBeforeLatest(
+                time.format("%r on %A, %d %B %Y").to_string(),
+            )
+            .into());
+        }
+        _ => {}
+    }
+
+    let last_op = last_entry.map(|e| e.entry_type);
 
     if matches!(last_op, Some(op) if op == entry_type) {
-        return Err(EntryError::AlreadyClocked(entry_type.to_string()));
+        return Err(EntryError::AlreadyClocked(entry_type.to_string()).into());
     }
 
     let entry = Entry {
@@ -98,9 +127,51 @@ pub fn add_entry(
         fs::create_dir_all(parent_dir)?;
     }
 
-    // print this before saving because we have to move it
-    // and I'm trying to avoid unnecessary cloning
-    println!("Clocked {} at {}", entry.entry_type, entry.timestamp);
+    {
+        // this is in a block because owo_colors adds functions to almost every type
+        // and it's super annoying to have it in scope all the time
+        use owo_colors::{DynColors, OwoColorize};
+        // print this before saving because we have to move it
+        // and I'm trying to avoid unnecessary cloning
+        let gray = DynColors::Rgb(128, 128, 128);
+        let oparen = "(".color(gray);
+        let cparen = ")".color(gray);
+
+        println!(
+            "{} {} {} {}{}",
+            "Clocked".color(gray),
+            entry.entry_type.colored().bold(),
+            "@".color(gray),
+            entry.timestamp.format(&format!(
+                "{} {}{}{} {} {}",
+                "%r".magenta().bold(),
+                oparen,
+                format!(
+                    "{}",
+                    CONFIG
+                        .timezone()
+                        .offset_from_utc_date(&Utc::now().date_naive())
+                        .abbreviation()
+                )
+                .blue(),
+                cparen,
+                "on".color(gray),
+                "%A, %d %B %Y".cyan().bold(),
+            )),
+            if let Some(offset) = offset_from_now {
+                format!(
+                    " {}{}{}",
+                    oparen,
+                    offset.to_friendly_string().yellow().bold(),
+                    cparen
+                )
+                .yellow()
+                .to_string()
+            } else {
+                String::new()
+            },
+        );
+    }
 
     let has_headers = !data_file.exists();
 
@@ -115,7 +186,7 @@ pub fn add_entry(
     Ok(())
 }
 
-pub fn toggle_clock(args: ClockEntryArgs) -> Result<(), EntryError> {
+pub fn toggle_clock(args: ClockEntryArgs) -> super::Result {
     let last_op = get_last_entry()?.map(|e| e.entry_type);
 
     match last_op {
@@ -124,7 +195,7 @@ pub fn toggle_clock(args: ClockEntryArgs) -> Result<(), EntryError> {
     }
 }
 
-fn get_last_entry() -> Result<Option<Entry>, EntryError> {
+fn get_last_entry() -> super::Result<Option<Entry>> {
     let data_file = CONFIG.get_output_file();
 
     if data_file.exists() {

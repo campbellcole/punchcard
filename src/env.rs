@@ -36,7 +36,7 @@ impl Config {
 
     pub fn data_folder(&self) -> &Path {
         self._data_folder.get_or_init(|| {
-            self.data_folder.clone().unwrap_or_else(|| dirs::data_dir().expect("could not locate a suitable data directory. please use the DATA_FOLDER environment variable").join("punchcard"))
+            self.data_folder.clone().unwrap_or_else(|| dirs::data_dir().expect("Could not locate a suitable data directory. please use the DATA_FOLDER environment variable").join("punchcard"))
         })
     }
 
@@ -47,8 +47,8 @@ impl Config {
     pub fn timezone(&self) -> &Tz {
         self._timezone.get_or_init(|| {
             self.timezone.unwrap_or_else(|| {
-                let tz = iana_time_zone::get_timezone().expect("could not determine local timezone. please use the TIMEZONE environment variable");
-                tz.parse().expect("the timezone provided by your system could not be parsed into an IANA timezone. please use the TIMEZONE environment variable")
+                let tz = iana_time_zone::get_timezone().expect("Could not determine local timezone. please use the TIMEZONE environment variable");
+                tz.parse().expect("The timezone provided by your system could not be parsed into an IANA timezone. please use the TIMEZONE environment variable")
             })
         })
     }

@@ -12,8 +12,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-use std::{error::Error, fs};
+use std::{fs, process::exit};
 
 use clap::{CommandFactory, Parser, Subcommand};
 #[cfg(feature = "generate_test_data")]
@@ -34,6 +33,9 @@ use jemallocator::Jemalloc;
 #[cfg(not(target_env = "msvc"))]
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
+
+// RFC3339 with nanoseconds, no space between ns and tz
+const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
 
 pub mod biduration;
 pub mod data;
@@ -72,38 +74,40 @@ pub enum Operation {
     GenerateData(GenerateDataArgs),
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     dotenvy::dotenv().ok();
 
     let args = Cli::parse();
 
     if !CONFIG.data_folder().exists() {
-        fs::create_dir_all(CONFIG.data_folder())?;
+        if let Err(err) = fs::create_dir_all(CONFIG.data_folder()) {
+            eprintln!("Failed to create data folder: {}", err);
+            exit(1);
+        }
     }
 
-    match args.operation {
-        Operation::ClockIn(args) => {
-            data::clock::add_entry(EntryType::ClockIn, args)?;
-        }
-        Operation::ClockOut(args) => {
-            data::clock::add_entry(EntryType::ClockOut, args)?;
-        }
-        Operation::ClockToggle(args) => {
-            data::clock::toggle_clock(args)?;
-        }
-        Operation::GenerateReport(args) => {
-            data::report::generate_report(args)?;
-        }
+    if let Err(err) = match args.operation {
+        Operation::ClockIn(args) => data::clock::add_entry(EntryType::ClockIn, args),
+        Operation::ClockOut(args) => data::clock::add_entry(EntryType::ClockOut, args),
+        Operation::ClockToggle(args) => data::clock::toggle_clock(args),
+        Operation::GenerateReport(args) => data::report::generate_report(args),
         Operation::GenerateCompletions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
+            Ok(())
         }
         #[cfg(feature = "generate_test_data")]
-        Operation::GenerateData(args) => {
-            data::generate::generate_test_entries(args)?;
-        }
-    }
+        Operation::GenerateData(args) => data::generate::generate_test_entries(args),
+    } {
+        use owo_colors::{DynColors, OwoColorize};
 
-    Ok(())
+        eprintln!(
+            "{}{} {}",
+            "Error".red().bold(),
+            ":".color(DynColors::Rgb(128, 128, 128)),
+            err
+        );
+        exit(1);
+    }
 }
 
 // move this back up once the lint is fixed

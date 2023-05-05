@@ -24,7 +24,7 @@ use polars::{
 };
 use thiserror::Error;
 
-use crate::env::CONFIG;
+use crate::{env::CONFIG, DATETIME_FORMAT};
 
 #[derive(Debug, Args)]
 pub struct GenerateReportArgs {
@@ -88,7 +88,7 @@ pub fn generate_report(
         output_file,
         num_rows,
     }: GenerateReportArgs,
-) -> PolarsResult<()> {
+) -> super::Result {
     let df = LazyCsvReader::new(CONFIG.get_output_file())
         .finish()?
         .select([
@@ -96,7 +96,7 @@ pub fn generate_report(
             col(COL_TIMESTAMP)
                 .str()
                 .strptime(StrpTimeOptions {
-                    fmt: Some("%Y-%m-%dT%H:%M:%S.%f%z".into()),
+                    fmt: Some(DATETIME_FORMAT.into()),
                     exact: true,
                     // we have to use UTC because of PST/PDT
                     utc: true,
@@ -161,11 +161,21 @@ pub fn generate_report(
     std::env::set_var("POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION", "1");
     std::env::set_var("POLARS_FMT_MAX_ROWS", num_rows.to_string());
 
-    println!("Report generated at {}:\n", Local::now());
-    if let NumRows::Some(num) = num_rows {
-        println!("{}", df.tail(Some(num)));
-    } else {
-        println!("{}", df);
+    {
+        use owo_colors::{DynColors, OwoColorize};
+        println!(
+            "{} {}:\n",
+            "Report generated at: ".bold().green(),
+            Local::now().cyan(),
+        );
+        if let NumRows::Some(num) = num_rows {
+            println!(
+                "{}",
+                df.tail(Some(num)).color(DynColors::Rgb(170, 170, 170))
+            );
+        } else {
+            println!("{}", df.color(DynColors::Rgb(170, 170, 170)));
+        }
     }
 
     if let Some(output_file) = output_file {

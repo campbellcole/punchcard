@@ -19,18 +19,33 @@ use super::biduration::{BiDuration, BiDurationParseError};
 
 #[test]
 fn test_parse_biduration() {
-    let inputs = ["5h 2m 3s", "in 5h 2m 3s", "5h 2m 3s ago", "in 5h 2m 3s ago"];
-
     let expected_duration = Duration::hours(5) + Duration::minutes(2) + Duration::seconds(3);
-
-    let outputs = [
-        Ok(BiDuration(expected_duration)),
-        Ok(BiDuration(expected_duration)),
-        Ok(BiDuration(-expected_duration)),
-        Err(BiDurationParseError::BothDirections),
+    let cases = [
+        ("5h 2m 3s", Ok(BiDuration::new(expected_duration))),
+        ("in 5h 2m 3s", Ok(BiDuration::new(expected_duration))),
+        ("5h 2m 3s ago", Ok(BiDuration::new(-expected_duration))),
+        ("in 5h 2m 3s ago", Err(BiDurationParseError::BothDirections)),
     ];
 
-    for (input, output) in inputs.iter().zip(outputs.iter()) {
-        assert_eq!(input.parse::<BiDuration>(), *output);
+    for (input, output) in cases {
+        assert_eq!(input.parse::<BiDuration>(), output);
+    }
+}
+
+#[test]
+fn test_format_biduration() {
+    // the output format always contains `in` or `ago`
+    // and it also expands some abbreviations
+    let cases = [
+        ("24d 12h 6m 3s", "in 24days 12h 6m 3s"),
+        ("24d 12h 6m 3s", "in 24days 12h 6m 3s"),
+        ("24d 12h 6m 3s ago", "24days 12h 6m 3s ago"),
+    ];
+
+    for input in cases {
+        assert_eq!(
+            input.0.parse::<BiDuration>().unwrap().to_friendly_string(),
+            input.1
+        );
     }
 }

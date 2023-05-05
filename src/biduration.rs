@@ -18,11 +18,57 @@ use std::{
     str::FromStr,
 };
 
-use chrono::{DateTime, Duration, TimeZone};
+use chrono::{DateTime, Duration, OutOfRangeError, TimeZone};
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BiDuration(pub Duration);
+/// A wrapper around the `humantime` crate which allows parsing negative durations.
+///
+/// The `humantime` crate only allows parsing `std::time::Duration`s which are positive.
+/// This wrapper uses that parser to first grab a `std::time::Duration` and then
+/// converts that into a `chrono::Duration` which can be negative.
+///
+/// Accepts the following formats:
+/// - "in 1h 30m" -> forward
+/// - "1h 30m" -> forward
+/// - "1h 30m ago" -> backward
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BiDuration(pub(crate) Duration);
+
+impl BiDuration {
+    pub fn to_friendly_string(&self) -> String {
+        let duration = self.0;
+        let (positive_duration, direction) = if **self < Duration::zero() {
+            (-duration, Direction::Backward)
+        } else {
+            (duration, Direction::Forward)
+        };
+        // SAFETY: cannot fail because we've inverted negative durations
+        let std_duration = positive_duration.to_std().unwrap();
+        let duration_str = humantime::format_duration(std_duration).to_string();
+        match direction {
+            Direction::Forward => format!("in {}", duration_str),
+            Direction::Backward => format!("{} ago", duration_str),
+        }
+    }
+
+    /// Convert a `std::time::Duration` and a direction into a `BiDuration`.
+    pub fn new_std(
+        duration: std::time::Duration,
+        direction: Direction,
+    ) -> Result<Self, OutOfRangeError> {
+        let chrono_duration = Duration::from_std(duration)?;
+        let chrono_duration = match direction {
+            Direction::Forward => chrono_duration,
+            Direction::Backward => -chrono_duration,
+        };
+        Ok(Self(chrono_duration))
+    }
+
+    /// Convert a `time::duration::Duration` into a `BiDuration`.
+    pub const fn new(duration: Duration) -> Self {
+        Self(duration)
+    }
+}
 
 impl Deref for BiDuration {
     type Target = Duration;
@@ -47,20 +93,16 @@ pub enum Direction {
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Error)]
 pub enum BiDurationParseError {
-    #[error("invalid direction: {0}")]
+    #[error("Invalid direction: {0}")]
     InvalidDirection(String),
-    #[error("both forward and backward directions specified")]
+    #[error("Both forward and backward directions specified")]
     BothDirections,
-    #[error("invalid duration: {0}")]
+    #[error("Invalid duration: {0}")]
     InvalidDuration(#[from] humantime::DurationError),
-    #[error("out of range: {0}")]
+    #[error("Out of range: {0}")]
     OutOfRange(#[from] chrono::OutOfRangeError),
 }
 
-/// There are three valid formats for a biduration:
-/// - "in 1h 30m" -> forward
-/// - "1h 30m" -> forward
-/// - "1h 30m ago" -> backward
 impl FromStr for BiDuration {
     type Err = BiDurationParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
