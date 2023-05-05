@@ -43,7 +43,7 @@ Options:
 
 **NOTE: The `generate-data` command is only available with the feature flag `generate_test_data`.**
 <br />
-This flag is enabled by default but will be disabled if you use the [above commands](#compilation) to run/install this program.
+This flag is enabled by the `debug` feature flag, but can be enabled in release builds as well.
 
 When using the `in` or `out` commands, the `-o` option can be used to specify an offset from the current time.
 
@@ -63,4 +63,4 @@ https://docs.rs/humantime/latest/humantime/fn.parse_duration.html
 
 ## Licensing
 
-This program uses the AGPLv3 license to prevent use by corporations.
+This program uses the AGPLv3 license to deter use by corporations.
