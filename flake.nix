@@ -22,8 +22,6 @@
             pkg-config
             clang
             rust-analyzer
-            python3
-            python3Packages.maya
           ];
 
           buildInputs = [
