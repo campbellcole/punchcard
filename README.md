@@ -42,11 +42,11 @@ Options:
   -V, --version  Print version
 ```
 
-**NOTE: The `generate-data` command is only available with the feature flag `generate_test_data`.**
+**NOTE: The `generate-data` subcommand is only available with the feature flag `generate_test_data`.**
 <br />
 This flag is enabled by the `debug` feature flag, but can be enabled in release builds as well.
 
-When using the `in` or `out` commands, the `-o` option can be used to specify an offset from the current time.
+When using the `in`, `out`, or `toggle` subcommands, the `-o` option can be used to specify an offset from the current time.
 
 Some examples of valid inputs:
 
@@ -54,7 +54,7 @@ Some examples of valid inputs:
 - "1h 30m" -> add 1h 30m to the current time
 - "1h 30m ago" -> subtract 1h 30m from the current time
 
-The `in` prefix is optional. By default, the offset is added to the current time.
+The `in` prefix is optional; by default, the offset is added to the current time.
 
 The offset is parsed by the `humantime` crate. It accepts a variety of formats. The suffixes do not have to be single letters, but they must be separated by whitespace. For example, you may use `1hours`, `1hour`, `1hr`, or `1h` to specify 1 hour.
 
