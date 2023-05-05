@@ -2,7 +2,7 @@
 
 A simple program to keep track of your hours if you work from home.
 
-# Compilation
+## Compilation
 
 **By default, the program requires nightly to support SIMD.**
 
