@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::error::Error;
+use std::{error::Error, fs};
 
 use clap::{CommandFactory, Parser, Subcommand};
 #[cfg(feature = "generate_test_data")]
@@ -24,13 +24,16 @@ use data::{
 };
 
 use env::CONFIG;
-use tokio::fs;
-
-// RFC3339 with nanoseconds, no space between ns and tz
-const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
 
 #[macro_use]
 extern crate serde;
+
+#[cfg(not(target_env = "msvc"))]
+use jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
 
 pub mod biduration;
 pub mod data;
@@ -52,6 +55,9 @@ pub enum Operation {
     /// Clock out
     #[command(name = "out")]
     ClockOut(ClockEntryArgs),
+    /// Clock either in or out
+    #[command(name = "toggle")]
+    ClockToggle(ClockEntryArgs),
     /// Interpret the times and generate a report
     #[command(name = "report")]
     GenerateReport(GenerateReportArgs),
@@ -66,32 +72,34 @@ pub enum Operation {
     GenerateData(GenerateDataArgs),
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     dotenvy::dotenv().ok();
 
     let args = Cli::parse();
 
     if !CONFIG.data_folder().exists() {
-        fs::create_dir_all(&CONFIG.data_folder()).await?;
+        fs::create_dir_all(CONFIG.data_folder())?;
     }
 
     match args.operation {
+        Operation::ClockIn(args) => {
+            data::clock::add_entry(EntryType::ClockIn, args)?;
+        }
+        Operation::ClockOut(args) => {
+            data::clock::add_entry(EntryType::ClockOut, args)?;
+        }
+        Operation::ClockToggle(args) => {
+            data::clock::toggle_clock(args)?;
+        }
         Operation::GenerateReport(args) => {
-            data::report::generate_report(args).await?;
+            data::report::generate_report(args)?;
         }
         Operation::GenerateCompletions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
         }
         #[cfg(feature = "generate_test_data")]
         Operation::GenerateData(args) => {
-            data::generate::generate_test_entries(args).await?;
-        }
-        Operation::ClockIn(args) => {
-            data::clock::add_entry(EntryType::ClockIn, args).await?;
-        }
-        Operation::ClockOut(args) => {
-            data::clock::add_entry(EntryType::ClockOut, args).await?;
+            data::generate::generate_test_entries(args)?;
         }
     }
 

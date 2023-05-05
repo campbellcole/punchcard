@@ -13,27 +13,32 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{io, path::PathBuf};
+use std::{
+    fs::OpenOptions,
+    io::{self, BufWriter, Write},
+    path::PathBuf,
+};
 
 use chrono::{prelude::*, Duration};
 use clap::Args;
 use rand::prelude::*;
-use tokio::{
-    fs::OpenOptions,
-    io::{AsyncWriteExt, BufWriter},
-};
 
-use crate::{env::CONFIG, DATETIME_FORMAT};
+use crate::env::CONFIG;
+
+// RFC3339 with nanoseconds, no space between ns and tz
+const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
 
 #[derive(Debug, Args)]
 pub struct GenerateDataArgs {
+    /// The number of entries to generate
     #[clap(short, long)]
     pub count: Option<usize>,
+    /// The path to output the CSV file
     #[clap(short, long)]
     pub output_file: Option<PathBuf>,
 }
 
-pub async fn generate_test_entries(
+pub fn generate_test_entries(
     GenerateDataArgs { count, output_file }: GenerateDataArgs,
 ) -> io::Result<()> {
     let mut prev_time = Local::now();
@@ -45,12 +50,11 @@ pub async fn generate_test_entries(
         .write(true)
         .create(true)
         .truncate(true)
-        .open(output_file.unwrap_or_else(|| CONFIG.get_output_file()))
-        .await?;
+        .open(output_file.unwrap_or_else(|| CONFIG.get_output_file()))?;
 
     let mut writer = BufWriter::new(file);
 
-    writer.write_all(b"entry_type,timestamp\n").await?;
+    writer.write_all(b"entry_type,timestamp\n")?;
 
     for x in 0..count.unwrap_or(10_000) {
         let entry_type = if x % 2 == 0 { "in" } else { "out" };
@@ -64,14 +68,14 @@ pub async fn generate_test_entries(
                 )
         };
 
-        writer
-            .write_all(format!("{},{}\n", entry_type, timestamp.format(DATETIME_FORMAT)).as_bytes())
-            .await?;
+        writer.write_all(
+            format!("{},{}\n", entry_type, timestamp.format(DATETIME_FORMAT)).as_bytes(),
+        )?;
 
         prev_time = timestamp;
     }
 
-    writer.flush().await?;
+    writer.flush()?;
 
     Ok(())
 }

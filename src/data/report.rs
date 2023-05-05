@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{fs::OpenOptions, path::PathBuf};
+use std::{fs::OpenOptions, path::PathBuf, str::FromStr};
 
 use chrono::Local;
 use clap::Args;
@@ -22,21 +22,53 @@ use polars::{
     prelude::*,
     series::ops::NullBehavior,
 };
+use thiserror::Error;
 
 use crate::env::CONFIG;
 
 #[derive(Debug, Args)]
 pub struct GenerateReportArgs {
+    /// Save the report to a file (will save every row, ignoring the '--num-rows' flag)
     #[clap(short, long)]
     pub output_file: Option<PathBuf>,
-    #[clap(short, long)]
-    pub num_rows: Option<u32>,
+    /// Print the last N rows of the report
+    #[clap(short, long, default_value_t = NumRows::Some(10), value_parser = <NumRows as FromStr>::from_str)]
+    pub num_rows: NumRows,
 }
 
-pub async fn generate_report(args: GenerateReportArgs) -> PolarsResult<()> {
-    tokio::task::spawn_blocking(|| generate_report_inner(args))
-        .await
-        .unwrap()
+#[derive(Debug, Clone)]
+pub enum NumRows {
+    All,
+    Some(usize),
+}
+
+impl ToString for NumRows {
+    fn to_string(&self) -> String {
+        match self {
+            NumRows::All => "all".into(),
+            NumRows::Some(num) => num.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum NumRowsError {
+    #[error("Number of rows cannot be zero")]
+    Zero,
+    #[error("Unknown value. Must be a positive integer or \"all\"")]
+    Unknown,
+}
+
+impl FromStr for NumRows {
+    type Err = NumRowsError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<usize>() {
+            Ok(num) if num == 0 => Err(NumRowsError::Zero),
+            Ok(num) => Ok(NumRows::Some(num)),
+            Err(_) if s.eq_ignore_ascii_case("all") => Ok(NumRows::All),
+            Err(_) => Err(NumRowsError::Unknown),
+        }
+    }
 }
 
 const TIME_UNIT: TimeUnit = TimeUnit::Nanoseconds;
@@ -45,36 +77,20 @@ const COL_TIMESTAMP: &str = "timestamp";
 const COL_ENTRY_TYPE: &str = "entry_type";
 const COL_DURATION: &str = "duration";
 
-const RES_TOTAL_HOURS: &str = "total_hours";
-const RES_WEEK_OF: &str = "week_of";
-const RES_WEEK_END: &str = "week_end";
-const RES_AVERAGE_SHIFT_DURATION: &str = "average_shift_duration";
-const RES_SHIFTS: &str = "shifts";
+const RES_TOTAL_HOURS: &str = "Total Hours";
+const RES_WEEK_OF: &str = "Week Of";
+const RES_WEEK_END: &str = "Week End";
+const RES_AVERAGE_SHIFT_DURATION: &str = "Avg. Shift Duration";
+const RES_SHIFTS: &str = "Number of Shifts";
 
-fn generate_report_inner(
+pub fn generate_report(
     GenerateReportArgs {
         output_file,
         num_rows,
     }: GenerateReportArgs,
 ) -> PolarsResult<()> {
-    let num_rows = if output_file.is_some() {
-        None // we want all rows
-    } else {
-        // we can only display 8 rows, so use that by default
-        // when printing to stdout
-        Some(num_rows.unwrap_or(8))
-    };
-
-    let mut df = LazyCsvReader::new(CONFIG.get_output_file())
+    let df = LazyCsvReader::new(CONFIG.get_output_file())
         .finish()?
-        .sort(
-            COL_TIMESTAMP,
-            SortOptions {
-                descending: false,
-                nulls_last: false,
-                multithreaded: true,
-            },
-        )
         .select([
             col(COL_ENTRY_TYPE),
             col(COL_TIMESTAMP)
@@ -92,7 +108,7 @@ fn generate_report_inner(
                 // then we cast back to local time
                 .cast(DataType::Datetime(
                     TIME_UNIT,
-                    Some("America/Los_Angeles".into()),
+                    Some(CONFIG.timezone().to_string()),
                 )),
         ])
         .with_column(
@@ -101,6 +117,14 @@ fn generate_report_inner(
                 .alias(COL_DURATION),
         )
         .filter(col(COL_ENTRY_TYPE).eq(lit("out")))
+        .sort(
+            COL_TIMESTAMP,
+            SortOptions {
+                descending: false,
+                nulls_last: false,
+                multithreaded: true,
+            },
+        )
         .groupby_dynamic(
             [],
             DynamicGroupOptions {
@@ -125,17 +149,24 @@ fn generate_report_inner(
             col(RES_SHIFTS),
             (col(RES_TOTAL_HOURS) / col(RES_SHIFTS))
                 .alias(RES_AVERAGE_SHIFT_DURATION)
-                .cast(DataType::Duration(TIME_UNIT))
-                .cast(DataType::Utf8),
+                .cast(DataType::Duration(TIME_UNIT)),
         ]);
-
-    if let Some(num_rows) = num_rows {
-        df = df.tail(num_rows);
-    }
 
     let mut df = df.collect()?;
 
-    println!("Report as of {}:\n\n{:?}", Local::now(), df);
+    std::env::set_var("POLARS_FMT_TABLE_FORMATTING", "UTF8_FULL_CONDENSED");
+    std::env::set_var("POLARS_FMT_TABLE_ROUNDED_CORNERS", "1");
+    std::env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", "1");
+    std::env::set_var("POLARS_FMT_TABLE_CELL_ALIGNMENT", "center");
+    std::env::set_var("POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION", "1");
+    std::env::set_var("POLARS_FMT_MAX_ROWS", num_rows.to_string());
+
+    println!("Report generated at {}:\n", Local::now());
+    if let NumRows::Some(num) = num_rows {
+        println!("{}", df.tail(Some(num)));
+    } else {
+        println!("{}", df);
+    }
 
     if let Some(output_file) = output_file {
         let file = OpenOptions::new()

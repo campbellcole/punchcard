@@ -4,15 +4,21 @@ A simple program to keep track of your hours if you work from home.
 
 # Compilation
 
-Compile with the `release` feature when using release mode (nightly):
+**By default, the program requires nightly to support SIMD.**
 
 ```shell
-$ cargo install --no-default-features --features release
+$ cargo install
 # or
-$ cargo run --release --no-default-features --features release
+$ cargo run --release
 ```
 
-If you are using stable Rust, switch `release` with `release_stable`
+If you are using stable Rust, compile with `--no-default-features --features stable`
+
+### Development/Debug builds
+
+```shell
+$ cargo run --features debug ...
+```
 
 ## Usage
 
@@ -38,10 +44,6 @@ Options:
 **NOTE: The `generate-data` command is only available with the feature flag `generate_test_data`.**
 <br />
 This flag is enabled by default but will be disabled if you use the [above commands](#compilation) to run/install this program.
-
-**NOTE 2: The timezone is currently hardcoded as `America/Los_Angeles`.**
-<br />
-This will be fixed in a future commit, and will use either the local timezone or a timezone provided in the `.env` file.
 
 When using the `in` or `out` commands, the `-o` option can be used to specify an offset from the current time.
 

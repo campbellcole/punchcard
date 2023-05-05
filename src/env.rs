@@ -15,14 +15,18 @@
 
 use std::path::{Path, PathBuf};
 
+use chrono_tz::Tz;
 use lazy_static::lazy_static;
 use once_cell::sync::OnceCell;
 
 #[derive(Deserialize)]
 pub struct Config {
     data_folder: Option<PathBuf>,
+    timezone: Option<Tz>,
     #[serde(skip)]
     _data_folder: OnceCell<PathBuf>,
+    #[serde(skip)]
+    _timezone: OnceCell<Tz>,
 }
 
 impl Config {
@@ -38,6 +42,15 @@ impl Config {
 
     pub fn get_output_file(&self) -> PathBuf {
         self.data_folder().join("hours.csv")
+    }
+
+    pub fn timezone(&self) -> &Tz {
+        self._timezone.get_or_init(|| {
+            self.timezone.unwrap_or_else(|| {
+                let tz = iana_time_zone::get_timezone().expect("could not determine local timezone. please use the TIMEZONE environment variable");
+                tz.parse().expect("the timezone provided by your system could not be parsed into an IANA timezone. please use the TIMEZONE environment variable")
+            })
+        })
     }
 }
 

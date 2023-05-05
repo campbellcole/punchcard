@@ -13,13 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{fmt::Display, fs::File, io, str::FromStr};
+use std::{fmt::Display, fs, fs::File, io, str::FromStr};
 
 use chrono::{DateTime, Local};
 use clap::Args;
 use itertools::Itertools;
 use thiserror::Error;
-use tokio::fs;
 
 use crate::{biduration::BiDuration, env::CONFIG};
 
@@ -47,17 +46,15 @@ impl Display for EntryType {
 }
 
 #[derive(Debug, Error)]
-pub enum AddEntryError {
+pub enum EntryError {
     #[error("Already clocked {0}")]
     AlreadyClocked(String),
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
     #[error("CSV error: {0}")]
     Csv(#[from] csv::Error),
-    #[error("Join error: {0}")]
-    Join(#[from] tokio::task::JoinError),
-    #[error("NLP error: {0}")]
-    Nlp(#[from] crate::nlp::NlpError),
+    // #[error("NLP error: {0}")]
+    // Nlp(#[from] crate::nlp::NlpError),
 }
 
 #[derive(Debug, Args)]
@@ -65,28 +62,72 @@ pub struct ClockEntryArgs {
     /// The offset from the current time to use as the clock in/out time
     #[clap(short, long, value_parser = <BiDuration as FromStr>::from_str)]
     pub offset_from_now: Option<BiDuration>,
-    /// Natural language to parse using ChatGPT. Reads key from "OPENAI_API_KEY" environment variable.
-    #[clap(short, long)]
-    pub nlp: Option<String>,
+    // /// Natural language to parse using ChatGPT. Reads key from "OPENAI_API_KEY" environment variable.
+    // #[clap(short, long)]
+    // pub nlp: Option<String>,
 }
 
-pub async fn add_entry(
+pub fn add_entry(
     entry_type: EntryType,
     ClockEntryArgs {
         offset_from_now,
-        nlp,
+        // nlp,
     }: ClockEntryArgs,
-) -> Result<(), AddEntryError> {
-    let timestamp = if let Some(ref nlp) = nlp {
-        crate::nlp::parse_nlp_timestamp(nlp).await?
-    } else {
+) -> Result<(), EntryError> {
+    let timestamp = {
         let now = Local::now();
         offset_from_now.map(|offset| now + *offset).unwrap_or(now)
     };
 
     let data_file = CONFIG.get_output_file();
 
-    let last_op = if data_file.exists() {
+    let last_op = get_last_entry()?.map(|e| e.entry_type);
+
+    if matches!(last_op, Some(op) if op == entry_type) {
+        return Err(EntryError::AlreadyClocked(entry_type.to_string()));
+    }
+
+    let entry = Entry {
+        entry_type,
+        timestamp,
+    };
+
+    let parent_dir = data_file.parent().unwrap();
+
+    if !parent_dir.exists() {
+        fs::create_dir_all(parent_dir)?;
+    }
+
+    // print this before saving because we have to move it
+    // and I'm trying to avoid unnecessary cloning
+    println!("Clocked {} at {}", entry.entry_type, entry.timestamp);
+
+    let has_headers = !data_file.exists();
+
+    let file = File::options().create(true).append(true).open(&data_file)?;
+
+    let mut writer = csv::WriterBuilder::default()
+        .has_headers(has_headers)
+        .from_writer(file);
+
+    writer.serialize(entry)?;
+
+    Ok(())
+}
+
+pub fn toggle_clock(args: ClockEntryArgs) -> Result<(), EntryError> {
+    let last_op = get_last_entry()?.map(|e| e.entry_type);
+
+    match last_op {
+        Some(EntryType::ClockIn) => add_entry(EntryType::ClockOut, args),
+        _ => add_entry(EntryType::ClockIn, args),
+    }
+}
+
+fn get_last_entry() -> Result<Option<Entry>, EntryError> {
+    let data_file = CONFIG.get_output_file();
+
+    if data_file.exists() {
         let mut reader = csv::ReaderBuilder::default()
             .has_headers(true)
             .from_path(&data_file)?;
@@ -101,47 +142,11 @@ pub async fn add_entry(
             })
             .last()
         {
-            Some(last_entry.entry_type)
+            Ok(Some(last_entry))
         } else {
-            None
+            Ok(None)
         }
     } else {
-        None
-    };
-
-    if matches!(last_op, Some(op) if op == entry_type) {
-        return Err(AddEntryError::AlreadyClocked(entry_type.to_string()));
+        Ok(None)
     }
-
-    let entry = Entry {
-        entry_type,
-        timestamp,
-    };
-
-    let parent_dir = data_file.parent().unwrap();
-
-    if !parent_dir.exists() {
-        fs::create_dir_all(&parent_dir).await?;
-    }
-
-    // print this before saving because we have to move it
-    // and I'm trying to avoid unnecessary cloning
-    println!("Clocked {} at {}", entry.entry_type, entry.timestamp);
-
-    tokio::task::spawn_blocking(move || {
-        let has_headers = !data_file.exists();
-
-        let file = File::options().create(true).append(true).open(&data_file)?;
-
-        let mut writer = csv::WriterBuilder::default()
-            .has_headers(has_headers)
-            .from_writer(file);
-
-        writer.serialize(entry)?;
-
-        io::Result::Ok(())
-    })
-    .await??;
-
-    Ok(())
 }
