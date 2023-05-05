@@ -29,12 +29,12 @@ A CLI tool for tracking work-from-home hours.
 Usage: punchcard <COMMAND>
 
 Commands:
-  in             Clock in
-  out            Clock out
-  report         Interpret the times and generate a report
-  completions    Generate completions for the given shell
-  generate-data  Generate test data
-  help           Print this message or the help of the given subcommand(s)
+  in           Clock in
+  out          Clock out
+  toggle       Clock either in or out
+  report       Interpret the times and generate a report
+  completions  Generate completions for the given shell
+  help         Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help
