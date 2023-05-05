@@ -17,7 +17,7 @@ If you are using stable Rust, compile with `--no-default-features --features sta
 ### Development/Debug builds
 
 ```shell
-$ cargo run --features debug ...
+$ cargo run --no-default-features --features debug ...
 ```
 
 ## Usage
