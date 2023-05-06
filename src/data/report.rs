@@ -15,7 +15,8 @@
 
 use std::{fs::OpenOptions, path::PathBuf, str::FromStr};
 
-use chrono::Local;
+use chrono::{Local, TimeZone, Utc};
+use chrono_tz::OffsetName;
 use clap::Args;
 use polars::{
     lazy::dsl::{col, StrpTimeOptions},
@@ -163,18 +164,33 @@ pub fn generate_report(
 
     {
         use owo_colors::{DynColors, OwoColorize};
+        let gray = DynColors::Rgb(200, 200, 200);
+        let dark_gray = DynColors::Rgb(128, 128, 128);
         println!(
-            "{} {}:\n",
-            "Report generated at: ".bold().green(),
-            Local::now().cyan(),
+            "{} {}{}",
+            "Report generated at".color(dark_gray),
+            Local::now().format(&format!(
+                "{} {}{}{} {} {}",
+                "%r".magenta().bold(),
+                "(".color(dark_gray),
+                format!(
+                    "{}",
+                    CONFIG
+                        .timezone()
+                        .offset_from_utc_date(&Utc::now().date_naive())
+                        .abbreviation()
+                )
+                .blue(),
+                ")".color(dark_gray),
+                "on".color(dark_gray),
+                "%A, %d %B %Y".cyan().bold(),
+            )),
+            ":".color(dark_gray)
         );
         if let NumRows::Some(num) = num_rows {
-            println!(
-                "{}",
-                df.tail(Some(num)).color(DynColors::Rgb(170, 170, 170))
-            );
+            println!("{}", df.tail(Some(num)).color(gray));
         } else {
-            println!("{}", df.color(DynColors::Rgb(170, 170, 170)));
+            println!("{}", df.color(gray));
         }
     }
 
