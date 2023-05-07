@@ -13,15 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{fmt::Display, fs, fs::File, str::FromStr};
+use std::{fmt::Display, fs::File, str::FromStr};
 
-use chrono::{DateTime, Local, TimeZone, Utc};
 use chrono_tz::OffsetName;
-use clap::Args;
 use itertools::Itertools;
-use thiserror::Error;
 
-use crate::{biduration::BiDuration, env::CONFIG};
+use crate::prelude::*;
 
 #[derive(Serialize, Deserialize)]
 pub struct Entry {
@@ -29,7 +26,7 @@ pub struct Entry {
     pub timestamp: DateTime<Local>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum EntryType {
     #[serde(rename = "in")]
     ClockIn,
@@ -56,16 +53,6 @@ impl Display for EntryType {
     }
 }
 
-#[derive(Debug, Error)]
-pub enum EntryError {
-    #[error("Already clocked {0}")]
-    AlreadyClocked(String),
-    #[error("Cannot add an entry before the latest entry at {0}")]
-    EntryBeforeLatest(String),
-    // #[error("NLP error: {0}")]
-    // Nlp(#[from] crate::nlp::NlpError),
-}
-
 #[derive(Debug, Args)]
 pub struct ClockEntryArgs {
     /// The offset from the current time to use as the clock in/out time
@@ -76,13 +63,14 @@ pub struct ClockEntryArgs {
     // pub nlp: Option<String>,
 }
 
+#[instrument]
 pub fn add_entry(
     entry_type: EntryType,
     ClockEntryArgs {
         offset_from_now,
         // nlp,
     }: ClockEntryArgs,
-) -> super::Result {
+) -> Result<()> {
     let timestamp = {
         let now = Local::now();
         offset_from_now
@@ -93,7 +81,7 @@ pub fn add_entry(
 
     let data_file = CONFIG.get_output_file();
 
-    let last_entry = get_last_entry()?;
+    let last_entry = get_last_entry().wrap_err(ERR_LATEST_ENTRY)?;
 
     // currently cannot allow entries before the latest entry
     // because that would add a lot of complexity to the code.
@@ -102,10 +90,10 @@ pub fn add_entry(
     // logic provides the same guarantee but is much simpler.
     match last_entry.as_ref().map(|e| e.timestamp) {
         Some(time) if time > timestamp => {
-            return Err(EntryError::EntryBeforeLatest(
-                time.format("%r on %A, %d %B %Y").to_string(),
-            )
-            .into());
+            return Err(eyre!(
+                "Cannot add an entry before the latest entry at {}",
+                time.format("%r on %A, %d %B %Y")
+            ));
         }
         _ => {}
     }
@@ -113,19 +101,13 @@ pub fn add_entry(
     let last_op = last_entry.map(|e| e.entry_type);
 
     if matches!(last_op, Some(op) if op == entry_type) {
-        return Err(EntryError::AlreadyClocked(entry_type.to_string()).into());
+        return Err(eyre!("Already clocked {entry_type}"));
     }
 
     let entry = Entry {
         entry_type,
         timestamp,
     };
-
-    let parent_dir = data_file.parent().unwrap();
-
-    if !parent_dir.exists() {
-        fs::create_dir_all(parent_dir)?;
-    }
 
     {
         // this is in a block because owo_colors adds functions to almost every type
@@ -175,19 +157,30 @@ pub fn add_entry(
 
     let has_headers = !data_file.exists();
 
-    let file = File::options().create(true).append(true).open(&data_file)?;
+    let file = File::options()
+        .create(true)
+        .append(true)
+        .open(&data_file)
+        .wrap_err(ERR_OPEN_CSV(&data_file))
+        .suggestion(SUGG_PROPER_PERMS(&data_file))?;
 
     let mut writer = csv::WriterBuilder::default()
         .has_headers(has_headers)
         .from_writer(file);
 
-    writer.serialize(entry)?;
+    writer
+        .serialize(entry)
+        .wrap_err(ERR_WRITE_CSV(&data_file))
+        .suggestion(SUGG_PROPER_PERMS(&data_file))?;
 
     Ok(())
 }
 
-pub fn toggle_clock(args: ClockEntryArgs) -> super::Result {
-    let last_op = get_last_entry()?.map(|e| e.entry_type);
+#[instrument]
+pub fn toggle_clock(args: ClockEntryArgs) -> Result<()> {
+    let last_op = get_last_entry()
+        .wrap_err(ERR_LATEST_ENTRY)?
+        .map(|e| e.entry_type);
 
     match last_op {
         Some(EntryType::ClockIn) => add_entry(EntryType::ClockOut, args),
@@ -195,17 +188,32 @@ pub fn toggle_clock(args: ClockEntryArgs) -> super::Result {
     }
 }
 
-fn get_last_entry() -> super::Result<Option<Entry>> {
+#[instrument]
+fn get_last_entry() -> Result<Option<Entry>> {
     let data_file = CONFIG.get_output_file();
 
     if data_file.exists() {
         let mut reader = csv::ReaderBuilder::default()
             .has_headers(true)
-            .from_path(&data_file)?;
+            .from_path(&data_file)
+            .wrap_err(ERR_READ_CSV(&data_file))
+            .suggestion(SUGG_REPORT_ISSUE)?;
+
+        let de = reader.deserialize::<Entry>();
+
+        let errs = de.filter_map(Result::err).collect::<Vec<_>>();
+
+        if !errs.is_empty() {
+            error!("Malformed CSV entries:");
+            for err in errs {
+                error!("{err}");
+            }
+            return Err(eyre!("There are malformed entries in the CSV file. Please fix them manually and try again."));
+        }
 
         if let Some(last_entry) = reader
             .deserialize::<Entry>()
-            .filter_map(|e| e.ok())
+            .filter_map(Result::ok)
             .sorted_by(|e1, e2| {
                 e1.timestamp
                     .partial_cmp(&e2.timestamp)

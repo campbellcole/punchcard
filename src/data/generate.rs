@@ -13,17 +13,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use rand::prelude::*;
 use std::{
     fs::OpenOptions,
     io::{BufWriter, Write},
     path::PathBuf,
 };
 
-use chrono::{prelude::*, Duration};
-use clap::Args;
-use rand::prelude::*;
-
-use crate::{env::CONFIG, DATETIME_FORMAT};
+use crate::prelude::*;
 
 #[derive(Debug, Args)]
 pub struct GenerateDataArgs {
@@ -35,23 +32,29 @@ pub struct GenerateDataArgs {
     pub output_file: Option<PathBuf>,
 }
 
+#[instrument]
 pub fn generate_test_entries(
     GenerateDataArgs { count, output_file }: GenerateDataArgs,
-) -> super::Result {
+) -> Result<()> {
     let mut prev_time = Local::now();
     // three and a half hours
     let base_offset = Duration::seconds(60 * 30 * 7);
     let mut rng = rand::thread_rng();
 
+    let output_file = output_file.unwrap_or_else(|| CONFIG.get_output_file());
     let file = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
-        .open(output_file.unwrap_or_else(|| CONFIG.get_output_file()))?;
+        .open(&output_file)
+        .wrap_err(ERR_OPEN_CSV(&output_file))
+        .suggestion(SUGG_PROPER_PERMS(&output_file))?;
 
     let mut writer = BufWriter::new(file);
 
-    writer.write_all(b"entry_type,timestamp\n")?;
+    writer
+        .write_all(b"entry_type,timestamp\n")
+        .wrap_err("Failed to write CSV header")?;
 
     for x in 0..count.unwrap_or(10_000) {
         let entry_type = if x % 2 == 0 { "in" } else { "out" };
@@ -65,14 +68,16 @@ pub fn generate_test_entries(
                 )
         };
 
-        writer.write_all(
-            format!("{},{}\n", entry_type, timestamp.format(DATETIME_FORMAT)).as_bytes(),
-        )?;
+        writer
+            .write_all(format!("{},{}\n", entry_type, timestamp.format(DATETIME_FORMAT)).as_bytes())
+            .wrap_err("Failed to write generated entry to CSV file")?;
 
         prev_time = timestamp;
     }
 
-    writer.flush()?;
+    writer
+        .flush()
+        .wrap_err("Failed to flush buffer to CSV file")?;
 
     Ok(())
 }

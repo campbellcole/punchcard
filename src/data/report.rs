@@ -15,28 +15,27 @@
 
 use std::{fs::OpenOptions, path::PathBuf, str::FromStr};
 
-use chrono::{Local, TimeZone, Utc};
-use chrono_tz::OffsetName;
-use clap::Args;
 use polars::{
     lazy::dsl::{col, StrpTimeOptions},
-    prelude::*,
+    prelude::{Duration, *},
     series::ops::NullBehavior,
 };
 use thiserror::Error;
 
-use crate::{env::CONFIG, DATETIME_FORMAT};
+// for some reason TimeZone needs to be explicitly imported
+use crate::prelude::{TimeZone, *};
 
 #[derive(Debug, Args)]
 pub struct GenerateReportArgs {
     /// Save the report to a file (will save every row, ignoring the '--num-rows' flag)
     #[clap(short, long)]
     pub output_file: Option<PathBuf>,
-    /// Print the last N rows of the report
+    /// Print the last N rows of the report (or 'all')
     #[clap(short, long, default_value_t = NumRows::Some(10), value_parser = <NumRows as FromStr>::from_str)]
     pub num_rows: NumRows,
 }
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Clone)]
 pub enum NumRows {
     All,
@@ -52,6 +51,7 @@ impl ToString for NumRows {
     }
 }
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Error)]
 pub enum NumRowsError {
     #[error("Number of rows cannot be zero")]
@@ -84,14 +84,16 @@ const RES_WEEK_END: &str = "Week End";
 const RES_AVERAGE_SHIFT_DURATION: &str = "Avg. Shift Duration";
 const RES_SHIFTS: &str = "Number of Shifts";
 
+#[instrument]
 pub fn generate_report(
     GenerateReportArgs {
         output_file,
         num_rows,
     }: GenerateReportArgs,
-) -> super::Result {
+) -> Result<()> {
     let df = LazyCsvReader::new(CONFIG.get_output_file())
-        .finish()?
+        .finish()
+        .wrap_err("Failed to create lazy CSV reader")?
         .select([
             col(COL_ENTRY_TYPE),
             col(COL_TIMESTAMP)
@@ -153,7 +155,7 @@ pub fn generate_report(
                 .cast(DataType::Duration(TIME_UNIT)),
         ]);
 
-    let mut df = df.collect()?;
+    let mut df = df.collect().wrap_err("Failed to process hours")?;
 
     std::env::set_var("POLARS_FMT_TABLE_FORMATTING", "UTF8_FULL_CONDENSED");
     std::env::set_var("POLARS_FMT_TABLE_ROUNDED_CORNERS", "1");
@@ -199,8 +201,12 @@ pub fn generate_report(
             .write(true)
             .create(true)
             .truncate(true)
-            .open(output_file)?;
-        CsvWriter::new(file).finish(&mut df)?;
+            .open(&output_file)
+            .wrap_err(ERR_OPEN_CSV(&output_file))
+            .suggestion(SUGG_PROPER_PERMS(&output_file))?;
+        CsvWriter::new(file)
+            .finish(&mut df)
+            .wrap_err(ERR_WRITE_CSV(&output_file))?;
     }
 
     Ok(())

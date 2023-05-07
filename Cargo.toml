@@ -1,6 +1,6 @@
 [package]
 name = "punchcard"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["Campbell M. Cole <pslightjs@gmail.com>"]
 description = "A CLI tool for tracking work-from-home hours."
@@ -12,6 +12,7 @@ chrono = { version = "0.4.24", features = ["serde"] }
 chrono-tz = { version = "0.8.2", features = ["serde"] }
 clap = { version = "4.2.5", features = ["derive"] }
 clap_complete_command = "0.5.1"
+color-eyre = "0.6.2"
 csv = "1.2.1"
 dirs = "5.0.1"
 dotenvy = "0.15.7"
@@ -33,6 +34,9 @@ polars = { version = "0.28.0", features = [
 rand = { version = "0.8.5" }
 serde = { version = "1.0.160", features = ["derive"] }
 thiserror = "1.0.40"
+tracing = "0.1.37"
+tracing-error = "0.2.0"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.5"

@@ -12,20 +12,27 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-use std::{fs, process::exit};
+use std::fs;
 
 use clap::{CommandFactory, Parser, Subcommand};
+use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
 use data::generate::GenerateDataArgs;
 use data::{
     clock::{ClockEntryArgs, EntryType},
     report::GenerateReportArgs,
 };
+use prelude::SUGG_PROPER_PERMS;
+use tracing_error::ErrorLayer;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use env::CONFIG;
 
 #[macro_use]
 extern crate serde;
+
+#[macro_use]
+extern crate tracing;
 
 #[cfg(not(target_env = "msvc"))]
 use jemallocator::Jemalloc;
@@ -35,12 +42,14 @@ use jemallocator::Jemalloc;
 static GLOBAL: Jemalloc = Jemalloc;
 
 // RFC3339 with nanoseconds, no space between ns and tz
-const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
+pub const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
 
 pub mod biduration;
+pub mod common;
 pub mod data;
 pub mod env;
 pub mod nlp;
+mod prelude;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -74,40 +83,46 @@ pub enum Operation {
     GenerateData(GenerateDataArgs),
 }
 
-fn main() {
+fn main() -> Result<()> {
     dotenvy::dotenv().ok();
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_target(true))
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("error")))
+        .with(ErrorLayer::default())
+        .init();
+    color_eyre::install()?;
 
     let args = Cli::parse();
 
-    if !CONFIG.data_folder().exists() {
-        if let Err(err) = fs::create_dir_all(CONFIG.data_folder()) {
-            eprintln!("Failed to create data folder: {}", err);
-            exit(1);
-        }
+    let data_folder = CONFIG.data_folder();
+    if !data_folder.exists() {
+        fs::create_dir_all(data_folder)
+            .wrap_err("Failed to create data folder")
+            .suggestion(SUGG_PROPER_PERMS(data_folder))?;
     }
 
-    if let Err(err) = match args.operation {
-        Operation::ClockIn(args) => data::clock::add_entry(EntryType::ClockIn, args),
-        Operation::ClockOut(args) => data::clock::add_entry(EntryType::ClockOut, args),
-        Operation::ClockToggle(args) => data::clock::toggle_clock(args),
-        Operation::GenerateReport(args) => data::report::generate_report(args),
+    match args.operation {
+        Operation::ClockIn(args) => {
+            data::clock::add_entry(EntryType::ClockIn, args).wrap_err("Failed to clock in")?
+        }
+        Operation::ClockOut(args) => {
+            data::clock::add_entry(EntryType::ClockOut, args).wrap_err("Failed to clock out")?
+        }
+        Operation::ClockToggle(args) => {
+            data::clock::toggle_clock(args).wrap_err("Failed to toggle clock status")?
+        }
+        Operation::GenerateReport(args) => {
+            data::report::generate_report(args).wrap_err("Failed to generate report")?
+        }
         Operation::GenerateCompletions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
-            Ok(())
         }
         #[cfg(feature = "generate_test_data")]
-        Operation::GenerateData(args) => data::generate::generate_test_entries(args),
-    } {
-        use owo_colors::{DynColors, OwoColorize};
-
-        eprintln!(
-            "{}{} {}",
-            "Error".red().bold(),
-            ":".color(DynColors::Rgb(128, 128, 128)),
-            err
-        );
-        exit(1);
+        Operation::GenerateData(args) => data::generate::generate_test_entries(args)
+            .wrap_err("Failed to generate test entries")?,
     }
+
+    Ok(())
 }
 
 // move this back up once the lint is fixed

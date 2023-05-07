@@ -15,6 +15,8 @@
 
 use chrono::Duration;
 
+use crate::data::report::{NumRows, NumRowsError};
+
 use super::biduration::{BiDuration, BiDurationParseError};
 
 #[test]
@@ -47,5 +49,18 @@ fn test_format_biduration() {
             input.0.parse::<BiDuration>().unwrap().to_friendly_string(),
             input.1
         );
+    }
+}
+
+#[test]
+fn test_parse_num_rows() {
+    let cases = [
+        ("all", Ok(NumRows::All)),
+        ("0", Err(NumRowsError::Zero)),
+        ("50", Ok(NumRows::Some(50))),
+    ];
+
+    for (input, output) in cases {
+        assert_eq!(input.parse::<NumRows>(), output);
     }
 }
