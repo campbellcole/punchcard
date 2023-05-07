@@ -39,19 +39,38 @@ pub fn get_clock_status(ClockStatusArgs { at_time }: ClockStatusArgs) -> Result<
             }
             ClockStatusType::Entry(entry_type) => {
                 println!(
-                    "{} {} {} {}{}",
-                    "You are clocked".color(gray),
+                    "{}{}{}{}{}",
+                    "You are clocked ".color(gray),
                     entry_type.colored().bold(),
-                    "as of".color(gray),
                     if is_now {
-                        "now".bold().yellow().to_string()
+                        String::new()
                     } else {
-                        status
-                            .current_time
-                            .format("%r on %A, %d %B %Y")
-                            .bold()
-                            .yellow()
-                            .to_string()
+                        format!(
+                            " {} {}",
+                            "as of".color(gray),
+                            status
+                                .current_time
+                                .format(SLIM_DATETIME)
+                                .bold()
+                                .yellow()
+                                .to_string()
+                        )
+                    },
+                    if let Some(until) = status.until {
+                        let duration = until - status.current_time;
+                        format!(
+                            " {} {} {}{}{}",
+                            "until".color(gray),
+                            until.format(SLIM_DATETIME).bold().magenta(),
+                            "(".color(gray),
+                            // SAFETY: until is always after current_time
+                            humantime::format_duration(duration.to_std().unwrap())
+                                .bold()
+                                .green(),
+                            ")".color(gray)
+                        )
+                    } else {
+                        String::new()
                     },
                     ".".color(gray)
                 )

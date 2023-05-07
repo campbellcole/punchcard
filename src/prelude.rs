@@ -28,4 +28,3 @@ pub use crate::biduration::BiDuration;
 pub use crate::common::*;
 pub use crate::csv::{Entry, EntryType};
 pub use crate::env::CONFIG;
-pub use crate::DATETIME_FORMAT;

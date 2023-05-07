@@ -53,6 +53,10 @@ impl Display for EntryType {
 
 pub fn build_reader() -> Result<Reader<File>> {
     check_data_file()?;
+    build_reader_inner()
+}
+
+fn build_reader_inner() -> Result<Reader<File>> {
     let data_file = CONFIG.get_output_file();
     ReaderBuilder::new()
         .has_headers(true)
@@ -62,7 +66,7 @@ pub fn build_reader() -> Result<Reader<File>> {
 }
 
 fn check_data_file() -> Result<()> {
-    let mut reader = build_reader()?;
+    let mut reader = build_reader_inner()?;
 
     let de = reader.deserialize::<Entry>();
 

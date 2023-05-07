@@ -99,7 +99,7 @@ pub fn generate_report(
             col(COL_TIMESTAMP)
                 .str()
                 .strptime(StrpTimeOptions {
-                    fmt: Some(DATETIME_FORMAT.into()),
+                    fmt: Some(CSV_DATETIME_FORMAT.into()),
                     exact: true,
                     // we have to use UTC because of PST/PDT
                     utc: true,
@@ -166,7 +166,7 @@ pub fn generate_report(
             "Report generated at".color(dark_gray),
             Local::now().format(&format!(
                 "{} {}{}{} {} {}",
-                "%r".magenta().bold(),
+                PRETTY_TIME.magenta().bold(),
                 "(".color(dark_gray),
                 format!(
                     "{}",
@@ -178,7 +178,7 @@ pub fn generate_report(
                 .blue(),
                 ")".color(dark_gray),
                 "on".color(dark_gray),
-                "%A, %d %B %Y".cyan().bold(),
+                PRETTY_DATE.cyan().bold(),
             )),
             ":".color(dark_gray)
         );

@@ -39,9 +39,6 @@ use jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
-// RFC3339 with nanoseconds, no space between ns and tz
-pub const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
-
 pub mod biduration;
 pub mod command;
 pub mod common;

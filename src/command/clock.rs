@@ -59,7 +59,7 @@ pub fn add_entry(
         Some(time) if time > timestamp => {
             return Err(eyre!(
                 "Cannot add an entry before the latest entry at {}",
-                time.format("%r on %A, %d %B %Y")
+                time.format(PRETTY_DATETIME)
             ));
         }
         _ => {}
@@ -93,7 +93,7 @@ pub fn add_entry(
             "@".color(gray),
             entry.timestamp.format(&format!(
                 "{} {}{}{} {} {}",
-                "%r".magenta().bold(),
+                PRETTY_TIME.magenta().bold(),
                 oparen,
                 format!(
                     "{}",
@@ -105,7 +105,7 @@ pub fn add_entry(
                 .blue(),
                 cparen,
                 "on".color(gray),
-                "%A, %d %B %Y".cyan().bold(),
+                PRETTY_DATE.cyan().bold(),
             )),
             if let Some(offset) = offset_from_now {
                 format!(

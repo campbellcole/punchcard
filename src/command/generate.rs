@@ -69,7 +69,9 @@ pub fn generate_test_entries(
         };
 
         writer
-            .write_all(format!("{},{}\n", entry_type, timestamp.format(DATETIME_FORMAT)).as_bytes())
+            .write_all(
+                format!("{},{}\n", entry_type, timestamp.format(CSV_DATETIME_FORMAT)).as_bytes(),
+            )
             .wrap_err("Failed to write generated entry to CSV file")?;
 
         prev_time = timestamp;
