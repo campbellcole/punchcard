@@ -17,8 +17,8 @@ use std::fs;
 use clap::{CommandFactory, Parser, Subcommand};
 use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
-use data::generate::GenerateDataArgs;
-use data::{
+use command::generate::GenerateDataArgs;
+use command::{
     clock::{ClockEntryArgs, ClockStatusArgs, EntryType},
     report::GenerateReportArgs,
 };
@@ -45,8 +45,8 @@ static GLOBAL: Jemalloc = Jemalloc;
 pub const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
 
 pub mod biduration;
+pub mod command;
 pub mod common;
-pub mod data;
 pub mod env;
 pub mod nlp;
 mod prelude;
@@ -106,25 +106,25 @@ fn main() -> Result<()> {
 
     match args.operation {
         Operation::ClockIn(args) => {
-            data::clock::add_entry(EntryType::ClockIn, args).wrap_err("Failed to clock in")?
+            command::clock::add_entry(EntryType::ClockIn, args).wrap_err("Failed to clock in")?
         }
         Operation::ClockOut(args) => {
-            data::clock::add_entry(EntryType::ClockOut, args).wrap_err("Failed to clock out")?
+            command::clock::add_entry(EntryType::ClockOut, args).wrap_err("Failed to clock out")?
         }
         Operation::ClockStatus(args) => {
-            data::clock::get_clock_status(args).wrap_err("Failed to check clock status")?
+            command::clock::get_clock_status(args).wrap_err("Failed to check clock status")?
         }
         Operation::ClockToggle(args) => {
-            data::clock::toggle_clock(args).wrap_err("Failed to toggle clock status")?
+            command::clock::toggle_clock(args).wrap_err("Failed to toggle clock status")?
         }
         Operation::GenerateReport(args) => {
-            data::report::generate_report(args).wrap_err("Failed to generate report")?
+            command::report::generate_report(args).wrap_err("Failed to generate report")?
         }
         Operation::GenerateCompletions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
         }
         #[cfg(feature = "generate_test_data")]
-        Operation::GenerateData(args) => data::generate::generate_test_entries(args)
+        Operation::GenerateData(args) => command::generate::generate_test_entries(args)
             .wrap_err("Failed to generate test entries")?,
     }
 

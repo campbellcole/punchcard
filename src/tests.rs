@@ -15,7 +15,7 @@
 
 use chrono::Duration;
 
-use crate::data::report::{NumRows, NumRowsError};
+use crate::command::report::{NumRows, NumRowsError};
 
 use super::biduration::{BiDuration, BiDurationParseError};
 
