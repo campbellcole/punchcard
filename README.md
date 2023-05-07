@@ -26,27 +26,30 @@ $ cargo run --no-default-features --features debug ...
 $ punchcard --help
 A CLI tool for tracking work-from-home hours.
 
-Usage: punchcard <COMMAND>
+Usage: punchcard [OPTIONS] <COMMAND>
 
 Commands:
   in             Clock in
   out            Clock out
   toggle         Clock either in or out
+  status         Check the current status
   report         Interpret the times and generate a report
   completions    Generate completions for the given shell
   generate-data  Generate test data
   help           Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help     Print help
-  -V, --version  Print version
+  -d, --data-folder <DATA_FOLDER>  [env: DATA_FOLDER=.] [default: /home/campbell/.local/share/punchcard]
+  -t, --timezone <TIMEZONE>        [env: TIMEZONE=] [default: America/Los_Angeles]
+  -h, --help                       Print help
+  -V, --version                    Print version
 ```
 
 **NOTE: The `generate-data` subcommand is only available with the feature flag `generate_test_data`.**
 <br />
 This flag is enabled by the `debug` feature flag, but can be enabled in release builds as well.
 
-When using the `in`, `out`, or `toggle` subcommands, the `-o` option can be used to specify an offset from the current time.
+When using the `in`, `out`, `toggle`, and `status` subcommands, the `-o` option can be used to specify an offset from the current time.
 
 Some examples of valid inputs:
 

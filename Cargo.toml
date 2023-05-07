@@ -1,27 +1,23 @@
 [package]
 name = "punchcard"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 authors = ["Campbell M. Cole <pslightjs@gmail.com>"]
 description = "A CLI tool for tracking work-from-home hours."
 license = "AGPL-3.0-or-later"
 
 [dependencies]
-# async-openai = "0.10.3"
 chrono = { version = "0.4.24", features = ["serde"] }
 chrono-tz = { version = "0.8.2", features = ["serde"] }
-clap = { version = "4.2.5", features = ["derive"] }
+clap = { version = "4.2.5", features = ["derive", "env"] }
 clap_complete_command = "0.5.1"
 color-eyre = "0.6.2"
 csv = "1.2.1"
 dirs = "5.0.1"
 dotenvy = "0.15.7"
-envy = "0.4.2"
 humantime = "2.1.0"
 iana-time-zone = "0.1.56"
 itertools = "0.10.5"
-lazy_static = "1.4.0"
-once_cell = "1.17.1"
 owo-colors = "3.5.0"
 polars = { version = "0.28.0", features = [
     "lazy",
@@ -31,7 +27,7 @@ polars = { version = "0.28.0", features = [
     "dynamic_groupby",
     "strings",
 ] }
-rand = { version = "0.8.5" }
+rand = { version = "0.8.5", optional = true }
 serde = { version = "1.0.160", features = ["derive"] }
 thiserror = "1.0.40"
 tracing = "0.1.37"
@@ -47,7 +43,7 @@ stable = ["performant"]
 debug = ["generate_test_data", "nightly"]
 
 # enables the generation of test data
-generate_test_data = []
+generate_test_data = ["rand"]
 
 nightly = ["polars/nightly", "rand/nightly", "rand/simd_support"]
 performant = ["polars/performant"]

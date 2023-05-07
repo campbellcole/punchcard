@@ -17,7 +17,10 @@ use crate::{csv::build_reader, prelude::*};
 use super::clock::ClockEntryArgs;
 
 #[instrument]
-pub fn get_clock_status(ClockEntryArgs { offset_from_now }: ClockEntryArgs) -> Result<()> {
+pub fn get_clock_status(
+    cli_args: &Cli,
+    ClockEntryArgs { offset_from_now }: &ClockEntryArgs,
+) -> Result<()> {
     let is_now = offset_from_now.is_none();
     let current_time = {
         let now = Local::now();
@@ -27,7 +30,7 @@ pub fn get_clock_status(ClockEntryArgs { offset_from_now }: ClockEntryArgs) -> R
             .unwrap_or(now)
     };
 
-    let status = get_clock_status_inner(current_time)?;
+    let status = get_clock_status_inner(cli_args, current_time)?;
 
     {
         use owo_colors::{DynColors, OwoColorize};
@@ -106,8 +109,8 @@ pub struct ClockStatus {
 }
 
 #[instrument]
-fn get_clock_status_inner(current_time: DateTime<Local>) -> Result<ClockStatus> {
-    let output_file = CONFIG.get_output_file();
+fn get_clock_status_inner(cli_args: &Cli, current_time: DateTime<Local>) -> Result<ClockStatus> {
+    let output_file = cli_args.get_output_file();
 
     if !output_file.exists() {
         return Ok(ClockStatus {
@@ -117,7 +120,7 @@ fn get_clock_status_inner(current_time: DateTime<Local>) -> Result<ClockStatus> 
         });
     }
 
-    let mut reader = build_reader()?;
+    let mut reader = build_reader(cli_args)?;
     let mut de = reader.deserialize::<Entry>();
 
     let mut this_entry = None;

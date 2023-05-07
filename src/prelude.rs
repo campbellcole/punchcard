@@ -26,5 +26,5 @@ pub use clap::Args;
 
 pub use crate::biduration::BiDuration;
 pub use crate::common::*;
-pub use crate::csv::{Entry, EntryType};
-pub use crate::env::CONFIG;
+pub use crate::csv::{build_reader, Entry, EntryType};
+pub use crate::Cli;

@@ -18,25 +18,20 @@ use std::{fs::File, str::FromStr};
 use chrono_tz::OffsetName;
 use itertools::Itertools;
 
-use crate::{csv::build_reader, prelude::*};
+use crate::prelude::*;
 
 #[derive(Debug, Args)]
 pub struct ClockEntryArgs {
     /// The offset from the current time to use as the clock in/out time
     #[clap(short, long, value_parser = <BiDuration as FromStr>::from_str)]
     pub offset_from_now: Option<BiDuration>,
-    // /// Natural language to parse using ChatGPT. Reads key from "OPENAI_API_KEY" environment variable.
-    // #[clap(short, long)]
-    // pub nlp: Option<String>,
 }
 
 #[instrument]
 pub fn add_entry(
+    cli_args: &Cli,
     entry_type: EntryType,
-    ClockEntryArgs {
-        offset_from_now,
-        // nlp,
-    }: ClockEntryArgs,
+    ClockEntryArgs { offset_from_now }: &ClockEntryArgs,
 ) -> Result<()> {
     let timestamp = {
         let now = Local::now();
@@ -46,9 +41,9 @@ pub fn add_entry(
             .unwrap_or(now)
     };
 
-    let data_file = CONFIG.get_output_file();
+    let data_file = cli_args.get_output_file();
 
-    let last_entry = get_last_entry().wrap_err(ERR_LATEST_ENTRY)?;
+    let last_entry = get_last_entry(cli_args).wrap_err(ERR_LATEST_ENTRY)?;
 
     // currently cannot allow entries before the latest entry
     // because that would add a lot of complexity to the code.
@@ -97,8 +92,8 @@ pub fn add_entry(
                 oparen,
                 format!(
                     "{}",
-                    CONFIG
-                        .timezone()
+                    cli_args
+                        .timezone
                         .offset_from_utc_date(&Utc::now().date_naive())
                         .abbreviation()
                 )
@@ -144,23 +139,23 @@ pub fn add_entry(
 }
 
 #[instrument]
-pub fn toggle_clock(args: ClockEntryArgs) -> Result<()> {
-    let last_op = get_last_entry()
+pub fn toggle_clock(cli_args: &Cli, args: &ClockEntryArgs) -> Result<()> {
+    let last_op = get_last_entry(cli_args)
         .wrap_err(ERR_LATEST_ENTRY)?
         .map(|e| e.entry_type);
 
     match last_op {
-        Some(EntryType::ClockIn) => add_entry(EntryType::ClockOut, args),
-        _ => add_entry(EntryType::ClockIn, args),
+        Some(EntryType::ClockIn) => add_entry(cli_args, EntryType::ClockOut, args),
+        _ => add_entry(cli_args, EntryType::ClockIn, args),
     }
 }
 
 #[instrument]
-fn get_last_entry() -> Result<Option<Entry>> {
-    let data_file = CONFIG.get_output_file();
+fn get_last_entry(cli_args: &Cli) -> Result<Option<Entry>> {
+    let data_file = cli_args.get_output_file();
 
     if data_file.exists() {
-        let mut reader = build_reader()?;
+        let mut reader = build_reader(cli_args)?;
         let de = reader.deserialize::<Entry>();
 
         if let Some(last_entry) = de

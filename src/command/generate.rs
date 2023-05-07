@@ -34,14 +34,17 @@ pub struct GenerateDataArgs {
 
 #[instrument]
 pub fn generate_test_entries(
-    GenerateDataArgs { count, output_file }: GenerateDataArgs,
+    cli_args: &Cli,
+    GenerateDataArgs { count, output_file }: &GenerateDataArgs,
 ) -> Result<()> {
     let mut prev_time = Local::now();
     // three and a half hours
     let base_offset = Duration::seconds(60 * 30 * 7);
     let mut rng = rand::thread_rng();
 
-    let output_file = output_file.unwrap_or_else(|| CONFIG.get_output_file());
+    let output_file = output_file
+        .clone()
+        .unwrap_or_else(|| cli_args.get_output_file());
     let file = OpenOptions::new()
         .write(true)
         .create(true)

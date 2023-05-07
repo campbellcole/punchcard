@@ -12,9 +12,10 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use crate::csv::EntryType;
+use chrono_tz::Tz;
 use clap::{CommandFactory, Parser, Subcommand};
 use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
@@ -23,8 +24,6 @@ use command::{clock::ClockEntryArgs, report::GenerateReportArgs};
 use prelude::SUGG_PROPER_PERMS;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-use env::CONFIG;
 
 #[macro_use]
 extern crate serde;
@@ -43,15 +42,33 @@ pub mod biduration;
 pub mod command;
 pub mod common;
 pub mod csv;
-pub mod env;
-pub mod nlp;
 mod prelude;
+
+fn default_timezone() -> Tz {
+    let tz = iana_time_zone::get_timezone()
+        .expect("Could not determine local timezone. Please use the TIMEZONE environment variable, or set the '--timezone' option.");
+    tz.parse().expect("The timezone provided by your system could not be parsed into an IANA timezone. Please use the TIMEZONE environment variable, or set the --timezone option.")
+}
+
+fn default_data_folder() -> PathBuf {
+    dirs::data_dir().expect("Could not locate a suitable data directory. Please use the DATA_FOLDER environment variable, or set the '--data-folder' option.").join("punchcard")
+}
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
+    #[clap(short, long, env = "DATA_FOLDER", default_value_os_t = default_data_folder())]
+    pub data_folder: PathBuf,
+    #[clap(short, long, env = "TIMEZONE", default_value_t = default_timezone())]
+    pub timezone: Tz,
     #[clap(subcommand)]
     pub operation: Operation,
+}
+
+impl Cli {
+    pub fn get_output_file(&self) -> PathBuf {
+        self.data_folder.join("hours.csv")
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -114,36 +131,33 @@ fn main() -> Result<()> {
         .init();
     color_eyre::install()?;
 
-    let args = Cli::parse();
+    let cli_args = Cli::parse();
 
-    let data_folder = CONFIG.data_folder();
+    let data_folder = &cli_args.data_folder;
     if !data_folder.exists() {
         fs::create_dir_all(data_folder)
             .wrap_err("Failed to create data folder")
             .suggestion(SUGG_PROPER_PERMS(data_folder))?;
     }
 
-    match args.operation {
-        Operation::ClockIn(args) => {
-            command::clock::add_entry(EntryType::ClockIn, args).wrap_err("Failed to clock in")?
-        }
+    match &cli_args.operation {
+        Operation::ClockIn(args) => command::clock::add_entry(&cli_args, EntryType::ClockIn, args)
+            .wrap_err("Failed to clock in")?,
         Operation::ClockOut(args) => {
-            command::clock::add_entry(EntryType::ClockOut, args).wrap_err("Failed to clock out")?
+            command::clock::add_entry(&cli_args, EntryType::ClockOut, args)
+                .wrap_err("Failed to clock out")?
         }
-        Operation::ClockStatus(args) => {
-            command::status::get_clock_status(args).wrap_err("Failed to check clock status")?
-        }
-        Operation::ClockToggle(args) => {
-            command::clock::toggle_clock(args).wrap_err("Failed to toggle clock status")?
-        }
-        Operation::GenerateReport(args) => {
-            command::report::generate_report(args).wrap_err("Failed to generate report")?
-        }
+        Operation::ClockStatus(args) => command::status::get_clock_status(&cli_args, args)
+            .wrap_err("Failed to check clock status")?,
+        Operation::ClockToggle(args) => command::clock::toggle_clock(&cli_args, args)
+            .wrap_err("Failed to toggle clock status")?,
+        Operation::GenerateReport(args) => command::report::generate_report(&cli_args, args)
+            .wrap_err("Failed to generate report")?,
         Operation::GenerateCompletions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
         }
         #[cfg(feature = "generate_test_data")]
-        Operation::GenerateData(args) => command::generate::generate_test_entries(args)
+        Operation::GenerateData(args) => command::generate::generate_test_entries(&cli_args, args)
             .wrap_err("Failed to generate test entries")?,
     }
 

@@ -86,12 +86,13 @@ const RES_SHIFTS: &str = "Number of Shifts";
 
 #[instrument]
 pub fn generate_report(
+    cli_args: &Cli,
     GenerateReportArgs {
         output_file,
         num_rows,
-    }: GenerateReportArgs,
+    }: &GenerateReportArgs,
 ) -> Result<()> {
-    let df = LazyCsvReader::new(CONFIG.get_output_file())
+    let df = LazyCsvReader::new(cli_args.get_output_file())
         .finish()
         .wrap_err("Failed to create lazy CSV reader")?
         .select([
@@ -111,7 +112,7 @@ pub fn generate_report(
                 // then we cast back to local time
                 .cast(DataType::Datetime(
                     TIME_UNIT,
-                    Some(CONFIG.timezone().to_string()),
+                    Some(cli_args.timezone.to_string()),
                 )),
         ])
         .with_column(
@@ -170,8 +171,8 @@ pub fn generate_report(
                 "(".color(dark_gray),
                 format!(
                     "{}",
-                    CONFIG
-                        .timezone()
+                    cli_args
+                        .timezone
                         .offset_from_utc_date(&Utc::now().date_naive())
                         .abbreviation()
                 )
@@ -191,7 +192,7 @@ pub fn generate_report(
         std::env::set_var("POLARS_FMT_MAX_ROWS", num_rows.to_string());
 
         if let NumRows::Some(num) = num_rows {
-            println!("{}", df.tail(Some(num)).color(gray));
+            println!("{}", df.tail(Some(*num)).color(gray));
         } else {
             println!("{}", df.color(gray));
         }
@@ -202,12 +203,12 @@ pub fn generate_report(
             .write(true)
             .create(true)
             .truncate(true)
-            .open(&output_file)
-            .wrap_err(ERR_OPEN_CSV(&output_file))
-            .suggestion(SUGG_PROPER_PERMS(&output_file))?;
+            .open(output_file)
+            .wrap_err(ERR_OPEN_CSV(output_file))
+            .suggestion(SUGG_PROPER_PERMS(output_file))?;
         CsvWriter::new(file)
             .finish(&mut df)
-            .wrap_err(ERR_WRITE_CSV(&output_file))?;
+            .wrap_err(ERR_WRITE_CSV(output_file))?;
     }
 
     Ok(())

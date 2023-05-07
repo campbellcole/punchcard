@@ -51,13 +51,13 @@ impl Display for EntryType {
     }
 }
 
-pub fn build_reader() -> Result<Reader<File>> {
-    check_data_file()?;
-    build_reader_inner()
+pub fn build_reader(cli_args: &Cli) -> Result<Reader<File>> {
+    check_data_file(cli_args)?;
+    build_reader_inner(cli_args)
 }
 
-fn build_reader_inner() -> Result<Reader<File>> {
-    let data_file = CONFIG.get_output_file();
+fn build_reader_inner(cli_args: &Cli) -> Result<Reader<File>> {
+    let data_file = cli_args.get_output_file();
     ReaderBuilder::new()
         .has_headers(true)
         .from_path(&data_file)
@@ -65,8 +65,8 @@ fn build_reader_inner() -> Result<Reader<File>> {
         .suggestion(SUGG_REPORT_ISSUE)
 }
 
-fn check_data_file() -> Result<()> {
-    let mut reader = build_reader_inner()?;
+fn check_data_file(cli_args: &Cli) -> Result<()> {
+    let mut reader = build_reader_inner(cli_args)?;
 
     let de = reader.deserialize::<Entry>();
 
