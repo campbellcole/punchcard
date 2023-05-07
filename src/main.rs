@@ -19,7 +19,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
 use command::generate::GenerateDataArgs;
-use command::{clock::ClockEntryArgs, report::GenerateReportArgs, status::ClockStatusArgs};
+use command::{clock::ClockEntryArgs, report::GenerateReportArgs};
 use prelude::SUGG_PROPER_PERMS;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -57,21 +57,44 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Operation {
     /// Clock in
+    ///
+    /// Adds a clock-in entry to the data file with the current time,
+    /// or the time given with the '-o' flag.
     #[command(name = "in")]
     ClockIn(ClockEntryArgs),
     /// Clock out
+    ///
+    /// Adds a clock-out entry to the data file with the current time,
+    /// or the time given with the '-o' flag.
     #[command(name = "out")]
     ClockOut(ClockEntryArgs),
     /// Clock either in or out
+    ///
+    /// Clocks in or out depending on what was done last. Override
+    /// the time used with the '-o' flag.
     #[command(name = "toggle")]
     ClockToggle(ClockEntryArgs),
     /// Check the current status
+    ///
+    /// Prints whether or not you are clocked in right now, and
+    /// will also print when the next entry occurs, if applicable.
+    /// You can also use the '-o' option to override
+    /// the time checked, so you can check if you were/will be clocked
+    /// in/out at a certain time.
     #[command(name = "status")]
-    ClockStatus(ClockStatusArgs),
+    ClockStatus(ClockEntryArgs),
     /// Interpret the times and generate a report
+    ///
+    /// Processes the entries in the data file and generates a weekly report
+    /// for the past 10 weeks. You can use the '-n' option to change the
+    /// number of weeks to generate a report for. You can also use the '-o'
+    /// option to save the report to a file alongside printing it to stdout.
     #[command(name = "report")]
     GenerateReport(GenerateReportArgs),
     /// Generate completions for the given shell
+    ///
+    /// Prints completions to stdout. You will need to pipe these
+    /// to a file, and where that file goes depends on your shell.
     #[command(name = "completions")]
     GenerateCompletions {
         #[clap(value_enum)]

@@ -22,6 +22,7 @@
             pkg-config
             clang
             rust-analyzer
+            cargo-outdated
           ];
 
           buildInputs = [

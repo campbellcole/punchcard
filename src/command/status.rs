@@ -14,16 +14,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use crate::{csv::build_reader, prelude::*};
 
-#[derive(Debug, Args)]
-pub struct ClockStatusArgs {
-    #[clap(short = 't', long)]
-    pub at_time: Option<DateTime<Local>>,
-}
+use super::clock::ClockEntryArgs;
 
 #[instrument]
-pub fn get_clock_status(ClockStatusArgs { at_time }: ClockStatusArgs) -> Result<()> {
-    let is_now = at_time.is_none();
-    let current_time = at_time.unwrap_or_else(Local::now);
+pub fn get_clock_status(ClockEntryArgs { offset_from_now }: ClockEntryArgs) -> Result<()> {
+    let is_now = offset_from_now.is_none();
+    let current_time = {
+        let now = Local::now();
+        offset_from_now
+            .as_ref()
+            .map(|offset| now + **offset)
+            .unwrap_or(now)
+    };
 
     let status = get_clock_status_inner(current_time)?;
 
