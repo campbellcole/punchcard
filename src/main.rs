@@ -46,20 +46,20 @@ mod prelude;
 
 fn default_timezone() -> Tz {
     let tz = iana_time_zone::get_timezone()
-        .expect("Could not determine local timezone. Please use the TIMEZONE environment variable, or set the '--timezone' option.");
-    tz.parse().expect("The timezone provided by your system could not be parsed into an IANA timezone. Please use the TIMEZONE environment variable, or set the --timezone option.")
+        .expect("Could not determine local timezone. Please use the PUNCHCARD_TIMEZONE environment variable, or set the '--timezone' option.");
+    tz.parse().expect("The timezone provided by your system could not be parsed into an IANA timezone. Please use the PUNCHCARD_TIMEZONE environment variable, or set the --timezone option.")
 }
 
 fn default_data_folder() -> PathBuf {
-    dirs::data_dir().expect("Could not locate a suitable data directory. Please use the DATA_FOLDER environment variable, or set the '--data-folder' option.").join("punchcard")
+    dirs::data_dir().expect("Could not locate a suitable data directory. Please use the PUNCHCARD_DATA_FOLDER environment variable, or set the '--data-folder' option.").join("punchcard")
 }
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
-    #[clap(short, long, env = "DATA_FOLDER", default_value_os_t = default_data_folder())]
+    #[clap(short, long, env = "PUNCHCARD_DATA_FOLDER", default_value_os_t = default_data_folder())]
     pub data_folder: PathBuf,
-    #[clap(short, long, env = "TIMEZONE", default_value_t = default_timezone())]
+    #[clap(short, long, env = "PUNCHCARD_TIMEZONE", default_value_t = default_timezone())]
     pub timezone: Tz,
     #[clap(subcommand)]
     pub operation: Operation,
