@@ -157,13 +157,6 @@ pub fn generate_report(
 
     let mut df = df.collect().wrap_err("Failed to process hours")?;
 
-    std::env::set_var("POLARS_FMT_TABLE_FORMATTING", "UTF8_FULL_CONDENSED");
-    std::env::set_var("POLARS_FMT_TABLE_ROUNDED_CORNERS", "1");
-    std::env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", "1");
-    std::env::set_var("POLARS_FMT_TABLE_CELL_ALIGNMENT", "center");
-    std::env::set_var("POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION", "1");
-    std::env::set_var("POLARS_FMT_MAX_ROWS", num_rows.to_string());
-
     {
         use owo_colors::{DynColors, OwoColorize};
         let gray = DynColors::Rgb(200, 200, 200);
@@ -189,6 +182,14 @@ pub fn generate_report(
             )),
             ":".color(dark_gray)
         );
+
+        std::env::set_var("POLARS_FMT_TABLE_FORMATTING", "UTF8_FULL_CONDENSED");
+        std::env::set_var("POLARS_FMT_TABLE_ROUNDED_CORNERS", "1");
+        std::env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", "1");
+        std::env::set_var("POLARS_FMT_TABLE_CELL_ALIGNMENT", "center");
+        std::env::set_var("POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION", "1");
+        std::env::set_var("POLARS_FMT_MAX_ROWS", num_rows.to_string());
+
         if let NumRows::Some(num) = num_rows {
             println!("{}", df.tail(Some(num)).color(gray));
         } else {

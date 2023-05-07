@@ -19,7 +19,7 @@ use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
 use data::generate::GenerateDataArgs;
 use data::{
-    clock::{ClockEntryArgs, EntryType},
+    clock::{ClockEntryArgs, ClockStatusArgs, EntryType},
     report::GenerateReportArgs,
 };
 use prelude::SUGG_PROPER_PERMS;
@@ -69,6 +69,9 @@ pub enum Operation {
     /// Clock either in or out
     #[command(name = "toggle")]
     ClockToggle(ClockEntryArgs),
+    /// Check the current status
+    #[command(name = "status")]
+    ClockStatus(ClockStatusArgs),
     /// Interpret the times and generate a report
     #[command(name = "report")]
     GenerateReport(GenerateReportArgs),
@@ -107,6 +110,9 @@ fn main() -> Result<()> {
         }
         Operation::ClockOut(args) => {
             data::clock::add_entry(EntryType::ClockOut, args).wrap_err("Failed to clock out")?
+        }
+        Operation::ClockStatus(args) => {
+            data::clock::get_clock_status(args).wrap_err("Failed to check clock status")?
         }
         Operation::ClockToggle(args) => {
             data::clock::toggle_clock(args).wrap_err("Failed to toggle clock status")?
