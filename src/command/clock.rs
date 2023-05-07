@@ -13,46 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{fmt::Display, fs::File, str::FromStr};
+use std::{fs::File, str::FromStr};
 
 use chrono_tz::OffsetName;
-use csv::{Reader, ReaderBuilder};
 use itertools::Itertools;
 
-use crate::prelude::*;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Entry {
-    pub entry_type: EntryType,
-    pub timestamp: DateTime<Local>,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub enum EntryType {
-    #[serde(rename = "in")]
-    ClockIn,
-    #[serde(rename = "out")]
-    ClockOut,
-}
-
-impl EntryType {
-    pub fn colored(&self) -> String {
-        use owo_colors::OwoColorize;
-        match self {
-            EntryType::ClockIn => "in".green().to_string(),
-            EntryType::ClockOut => "out".red().to_string(),
-        }
-    }
-}
-
-impl Display for EntryType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            EntryType::ClockIn => write!(f, "in"),
-            EntryType::ClockOut => write!(f, "out"),
-        }
-    }
-}
+use crate::{csv::build_reader, prelude::*};
 
 #[derive(Debug, Args)]
 pub struct ClockEntryArgs {
@@ -194,7 +160,6 @@ fn get_last_entry() -> Result<Option<Entry>> {
     let data_file = CONFIG.get_output_file();
 
     if data_file.exists() {
-        check_data_file()?;
         let mut reader = build_reader()?;
         let de = reader.deserialize::<Entry>();
 
@@ -214,148 +179,4 @@ fn get_last_entry() -> Result<Option<Entry>> {
     } else {
         Ok(None)
     }
-}
-
-#[derive(Debug, Args)]
-pub struct ClockStatusArgs {
-    #[clap(short = 't', long)]
-    pub at_time: Option<DateTime<Local>>,
-}
-
-#[instrument]
-pub fn get_clock_status(ClockStatusArgs { at_time }: ClockStatusArgs) -> Result<()> {
-    let is_now = at_time.is_none();
-    let current_time = at_time.unwrap_or_else(Local::now);
-
-    let status = get_clock_status_inner(current_time)?;
-
-    {
-        use owo_colors::{DynColors, OwoColorize};
-        let gray = DynColors::Rgb(128, 128, 128);
-        match status.status_type {
-            ClockStatusType::NoDataFile => {
-                println!(
-                    "{}",
-                    "The data file does not exist! Start using punchcard to generate it.".red()
-                );
-            }
-            ClockStatusType::Entry(entry_type) => {
-                println!(
-                    "{} {} {} {}{}",
-                    "You are clocked".color(gray),
-                    entry_type.colored().bold(),
-                    "as of".color(gray),
-                    if is_now {
-                        "now".bold().yellow().to_string()
-                    } else {
-                        status
-                            .current_time
-                            .format("%r on %A, %d %B %Y")
-                            .bold()
-                            .yellow()
-                            .to_string()
-                    },
-                    ".".color(gray)
-                )
-            }
-        }
-    }
-
-    Ok(())
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum ClockStatusType {
-    NoDataFile,
-    Entry(EntryType),
-}
-
-impl ClockStatusType {
-    pub fn as_string(&self) -> String {
-        match self {
-            ClockStatusType::NoDataFile => String::new(),
-            ClockStatusType::Entry(e) => e.to_string(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ClockStatus {
-    status_type: ClockStatusType,
-    current_time: DateTime<Local>,
-    until: Option<DateTime<Local>>,
-}
-
-#[instrument]
-fn get_clock_status_inner(current_time: DateTime<Local>) -> Result<ClockStatus> {
-    let output_file = CONFIG.get_output_file();
-
-    if !output_file.exists() {
-        return Ok(ClockStatus {
-            status_type: ClockStatusType::NoDataFile,
-            current_time,
-            until: None,
-        });
-    }
-
-    check_data_file()?;
-    let mut reader = build_reader()?;
-    let mut de = reader.deserialize::<Entry>();
-
-    let mut this_entry = None;
-    let mut next_entry = None;
-
-    // all entries will be Ok because the build_reader method throws
-    // an error if there are any malformed entries
-    while let Some(Ok(entry)) = de.next() {
-        if entry.timestamp > current_time {
-            next_entry = Some(entry);
-            break;
-        } else {
-            this_entry = Some(entry);
-        }
-    }
-
-    let status_type = ClockStatusType::Entry(
-        this_entry
-            .map(|e| e.entry_type)
-            .unwrap_or(EntryType::ClockOut),
-    );
-
-    let until = next_entry.map(|e| e.timestamp);
-
-    Ok(ClockStatus {
-        status_type,
-        current_time,
-        until,
-    })
-}
-
-fn build_reader() -> Result<Reader<File>> {
-    let data_file = CONFIG.get_output_file();
-    ReaderBuilder::new()
-        .has_headers(true)
-        .from_path(&data_file)
-        .wrap_err(ERR_READ_CSV(&data_file))
-        .suggestion(SUGG_REPORT_ISSUE)
-}
-
-fn check_data_file() -> Result<()> {
-    let mut reader = build_reader()?;
-
-    let de = reader.deserialize::<Entry>();
-
-    let errs = de.filter_map(Result::err).collect::<Vec<_>>();
-
-    if !errs.is_empty() {
-        error!("Malformed CSV entries:");
-        for err in errs {
-            error!("{err}");
-        }
-        return Err(eyre!(
-            "There are malformed entries in the CSV file. Please fix them manually and try again."
-        ));
-    }
-
-    Ok(())
 }

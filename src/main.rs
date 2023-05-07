@@ -14,14 +14,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 use std::fs;
 
+use crate::csv::EntryType;
 use clap::{CommandFactory, Parser, Subcommand};
 use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
 use command::generate::GenerateDataArgs;
-use command::{
-    clock::{ClockEntryArgs, ClockStatusArgs, EntryType},
-    report::GenerateReportArgs,
-};
+use command::{clock::ClockEntryArgs, report::GenerateReportArgs, status::ClockStatusArgs};
 use prelude::SUGG_PROPER_PERMS;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -47,6 +45,7 @@ pub const DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
 pub mod biduration;
 pub mod command;
 pub mod common;
+pub mod csv;
 pub mod env;
 pub mod nlp;
 mod prelude;
@@ -112,7 +111,7 @@ fn main() -> Result<()> {
             command::clock::add_entry(EntryType::ClockOut, args).wrap_err("Failed to clock out")?
         }
         Operation::ClockStatus(args) => {
-            command::clock::get_clock_status(args).wrap_err("Failed to check clock status")?
+            command::status::get_clock_status(args).wrap_err("Failed to check clock status")?
         }
         Operation::ClockToggle(args) => {
             command::clock::toggle_clock(args).wrap_err("Failed to toggle clock status")?

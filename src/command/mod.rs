@@ -17,3 +17,4 @@ pub mod clock;
 #[cfg(feature = "generate_test_data")]
 pub mod generate;
 pub mod report;
+pub mod status;
