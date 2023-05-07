@@ -1,5 +1,7 @@
 {
   "licenser.author": "Campbell M. Cole",
   "licenser.license": "AGPLv3",
-  "licenser.projectName": "punchcard"
+  "licenser.projectName": "punchcard",
+  "rust-analyzer.cargo.noDefaultFeatures": true,
+  "rust-analyzer.cargo.features": ["debug"]
 }
