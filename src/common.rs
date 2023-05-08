@@ -41,8 +41,8 @@ pub fn SUGG_PROPER_PERMS(p: &Path) -> String {
 }
 
 pub const PRETTY_TIME: &str = "%r";
-pub const PRETTY_DATE: &str = "%A, d %B %Y";
-pub const PRETTY_DATETIME: &str = "%r on %A, d %B %Y";
+pub const PRETTY_DATE: &str = "%A, %d %B %Y";
+pub const PRETTY_DATETIME: &str = "%r on %A, %d %B %Y";
 pub const SLIM_DATETIME: &str = "%r %d %B %Y";
 
 // RFC3339 with nanoseconds, no space between ns and tz
