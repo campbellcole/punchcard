@@ -20,7 +20,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
 use command::generate::GenerateDataArgs;
-use command::{clock::ClockEntryArgs, report::GenerateReportArgs};
+use command::{clock::ClockEntryArgs, report::ReportSettings};
 use prelude::SUGG_PROPER_PERMS;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -43,6 +43,8 @@ pub mod command;
 pub mod common;
 pub mod csv;
 mod prelude;
+pub mod quantity;
+pub mod table;
 
 fn default_timezone() -> Tz {
     let tz = iana_time_zone::get_timezone()
@@ -107,7 +109,7 @@ pub enum Operation {
     /// number of weeks to generate a report for. You can also use the '-o'
     /// option to save the report to a file alongside printing it to stdout.
     #[command(name = "report")]
-    GenerateReport(GenerateReportArgs),
+    GenerateReport(ReportSettings),
     /// Generate completions for the given shell
     ///
     /// Prints completions to stdout. You will need to pipe these

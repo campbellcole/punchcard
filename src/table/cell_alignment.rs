@@ -13,19 +13,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub use color_eyre::{
-    eyre::{eyre, Context},
-    Help, Result,
-};
+use clap::ValueEnum;
+use comfy_table::CellAlignment as CTCellAlignment;
 
-pub use chrono::{DateTime, Duration, Local, TimeZone, Utc};
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum CellAlignment {
+    Left,
+    Right,
+    Center,
+}
 
-pub use chrono_tz::OffsetName;
-
-pub use clap::Args;
-
-pub use crate::biduration::BiDuration;
-pub use crate::common::*;
-pub use crate::csv::{build_reader, Entry, EntryType};
-pub use crate::quantity::{NumCols, NumRows, Quantity, QuantityError};
-pub use crate::Cli;
+impl CellAlignment {
+    pub fn get(&self) -> CTCellAlignment {
+        match self {
+            CellAlignment::Left => CTCellAlignment::Left,
+            CellAlignment::Right => CTCellAlignment::Right,
+            CellAlignment::Center => CTCellAlignment::Center,
+        }
+    }
+}

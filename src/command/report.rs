@@ -15,62 +15,18 @@
 
 use std::{fs::OpenOptions, path::PathBuf, str::FromStr};
 
+use clap::ArgAction;
 use polars::{
     lazy::dsl::{col, StrpTimeOptions},
     prelude::{Duration, *},
     series::ops::NullBehavior,
 };
-use thiserror::Error;
 
 // for some reason TimeZone needs to be explicitly imported
-use crate::prelude::{TimeZone, *};
-
-#[derive(Debug, Args)]
-pub struct GenerateReportArgs {
-    /// Save the report to a file (will save every row, ignoring the '--num-rows' flag)
-    #[clap(short, long)]
-    pub output_file: Option<PathBuf>,
-    /// Print the last N rows of the report (or 'all')
-    #[clap(short, long, default_value_t = NumRows::Some(10), value_parser = <NumRows as FromStr>::from_str)]
-    pub num_rows: NumRows,
-}
-
-#[cfg_attr(test, derive(PartialEq))]
-#[derive(Debug, Clone)]
-pub enum NumRows {
-    All,
-    Some(usize),
-}
-
-impl ToString for NumRows {
-    fn to_string(&self) -> String {
-        match self {
-            NumRows::All => "all".into(),
-            NumRows::Some(num) => num.to_string(),
-        }
-    }
-}
-
-#[cfg_attr(test, derive(PartialEq))]
-#[derive(Debug, Error)]
-pub enum NumRowsError {
-    #[error("Number of rows cannot be zero")]
-    Zero,
-    #[error("Unknown value. Must be a positive integer or \"all\"")]
-    Unknown,
-}
-
-impl FromStr for NumRows {
-    type Err = NumRowsError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.parse::<usize>() {
-            Ok(num) if num == 0 => Err(NumRowsError::Zero),
-            Ok(num) => Ok(NumRows::Some(num)),
-            Err(_) if s.eq_ignore_ascii_case("all") => Ok(NumRows::All),
-            Err(_) => Err(NumRowsError::Unknown),
-        }
-    }
-}
+use crate::{
+    prelude::{TimeZone, *},
+    table::{cell_alignment::CellAlignment, color::Color, style::TableStyle, DataFrameDisplay},
+};
 
 const TIME_UNIT: TimeUnit = TimeUnit::Nanoseconds;
 
@@ -84,14 +40,60 @@ const RES_WEEK_END: &str = "Week End";
 const RES_AVERAGE_SHIFT_DURATION: &str = "Avg. Shift Duration";
 const RES_SHIFTS: &str = "Number of Shifts";
 
+#[derive(Debug, Args)]
+pub struct ReportSettings {
+    /// Save the report to a file (will save every row, ignoring the '--num-rows' flag)
+    #[clap(short = 'o', long, default_value = None)]
+    pub output_file: Option<PathBuf>,
+    /// Only print the table and nothing else
+    #[clap(short = 'j', long, default_value_t = false)]
+    pub just_table: bool,
+    /// The maximum number of characters to display in a string column.
+    #[clap(short = 't', long, default_value_t = 32)]
+    pub string_truncate: usize,
+    /// The maximum number of columns to display (or 'all').
+    #[clap(short = 'c', long, default_value_t = NumCols::Some(10), value_parser = <NumCols as FromStr>::from_str)]
+    pub max_n_cols: NumCols,
+    /// The maximum number of rows to display (or 'all').
+    #[clap(short = 'r', long, default_value_t = NumRows::Some(10), value_parser = <NumRows as FromStr>::from_str)]
+    pub max_n_rows: NumRows,
+    /// Hide the column names.
+    #[clap(short = 'n', long, default_value_t = false)]
+    pub hide_column_names: bool,
+    /// Hide the data types.
+    #[clap(short = 'd', long, default_value_t = true)]
+    pub hide_data_types: bool,
+    /// Show data types and column names inline.
+    #[clap(short = 'i', long, default_value_t = false)]
+    pub inline_data_types: bool,
+    /// Hide the column separator.
+    #[clap(short = 'e', long, default_value_t = false)]
+    pub hide_column_separator: bool,
+    /// The table style.
+    #[clap(short = 's', long, value_enum, default_value_t = TableStyle::Utf8Full)]
+    pub style: TableStyle,
+    /// Use rounded corners.
+    #[clap(short = 'f', long, default_value_t = true)]
+    pub rounded_corners: bool,
+    /// Use solid inner borders instead of dashed.
+    #[clap(short = 'b', long, default_value_t = true)]
+    pub solid_inner_borders: bool,
+    /// Text alignment within cells.
+    #[clap(short = 'a', long, value_enum, default_value_t = CellAlignment::Center)]
+    pub cell_alignment: CellAlignment,
+    /// The maximum width of the table (defaults to TTY width)
+    #[clap(short = 'w', long, default_value = None)]
+    pub width: Option<u16>,
+    /// The color of the header cells on the table
+    #[clap(long, default_value_t = Color::DarkMagenta)]
+    pub header_color: Color,
+    /// The color of each column in the table. Can be applied multiple times, only the first 5 will be used.
+    #[clap(long, action = ArgAction::Append)]
+    pub column_colors: Option<Vec<Color>>,
+}
+
 #[instrument]
-pub fn generate_report(
-    cli_args: &Cli,
-    GenerateReportArgs {
-        output_file,
-        num_rows,
-    }: &GenerateReportArgs,
-) -> Result<()> {
+pub fn generate_report(cli_args: &Cli, table_settings: &ReportSettings) -> Result<()> {
     let df = LazyCsvReader::new(cli_args.get_output_file())
         .finish()
         .wrap_err("Failed to create lazy CSV reader")?
@@ -102,7 +104,7 @@ pub fn generate_report(
                 .strptime(StrpTimeOptions {
                     fmt: Some(CSV_DATETIME_FORMAT.into()),
                     exact: true,
-                    // we have to use UTC because of PST/PDT
+                    // we have to use UTC because of PST/PDT, etc.
                     utc: true,
                     tz_aware: true,
                     date_dtype: DataType::Datetime(TIME_UNIT, None),
@@ -158,9 +160,8 @@ pub fn generate_report(
 
     let mut df = df.collect().wrap_err("Failed to process hours")?;
 
-    {
+    if !table_settings.just_table {
         use owo_colors::{DynColors, OwoColorize};
-        let gray = DynColors::Rgb(200, 200, 200);
         let dark_gray = DynColors::Rgb(128, 128, 128);
         println!(
             "{} {}{}",
@@ -183,22 +184,12 @@ pub fn generate_report(
             )),
             ":".color(dark_gray)
         );
-
-        std::env::set_var("POLARS_FMT_TABLE_FORMATTING", "UTF8_FULL_CONDENSED");
-        std::env::set_var("POLARS_FMT_TABLE_ROUNDED_CORNERS", "1");
-        std::env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", "1");
-        std::env::set_var("POLARS_FMT_TABLE_CELL_ALIGNMENT", "center");
-        std::env::set_var("POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION", "1");
-        std::env::set_var("POLARS_FMT_MAX_ROWS", num_rows.to_string());
-
-        if let NumRows::Some(num) = num_rows {
-            println!("{}", df.tail(Some(*num)).color(gray));
-        } else {
-            println!("{}", df.color(gray));
-        }
     }
 
-    if let Some(output_file) = output_file {
+    let display = DataFrameDisplay::new(&df, table_settings);
+    println!("{display}");
+
+    if let Some(output_file) = &table_settings.output_file {
         let file = OpenOptions::new()
             .write(true)
             .create(true)

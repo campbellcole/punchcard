@@ -1,6 +1,6 @@
 [package]
 name = "punchcard"
-version = "0.5.2"
+version = "0.6.0"
 edition = "2021"
 authors = ["Campbell M. Cole <pslightjs@gmail.com>"]
 description = "A CLI tool for tracking work-from-home hours."
@@ -8,10 +8,11 @@ license = "AGPL-3.0-or-later"
 
 [dependencies]
 chrono = { version = "0.4.24", features = ["serde"] }
-chrono-tz = { version = "0.8.2", features = ["serde"] }
+chrono-tz = { version = "0.8.2" }
 clap = { version = "4.2.5", features = ["derive", "env"] }
 clap_complete_command = "0.5.1"
 color-eyre = "0.6.2"
+comfy-table = "6.1.4"
 csv = "1.2.1"
 dirs = "5.0.1"
 dotenvy = "0.15.7"
@@ -19,13 +20,14 @@ humantime = "2.1.0"
 iana-time-zone = "0.1.56"
 itertools = "0.10.5"
 owo-colors = "3.5.0"
-polars = { version = "0.28.0", features = [
-    "lazy",
-    "timezones",
-    "temporal",
-    "diff",
-    "dynamic_groupby",
-    "strings",
+polars = { version = "0.28.0", default-features = false, features = [
+    "csv-file",        # for reading/writing CSV files
+    "lazy",            # for LazyFrame
+    "timezones",       # for interpreting timezones
+    "temporal",        # for operating on temporal data
+    "diff",            # for diffing rows to find durations
+    "dynamic_groupby", # for resampling by week
+    "strings",         # for parsing strings to dates
 ] }
 rand = { version = "0.8.5", optional = true }
 serde = { version = "1.0.160", features = ["derive"] }
