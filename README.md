@@ -39,8 +39,8 @@ Commands:
   help           Print this message or the help of the given subcommand(s)
 
 Options:
-  -d, --data-folder <DATA_FOLDER>  [env: DATA_FOLDER=.] [default: /home/campbell/.local/share/punchcard]
-  -t, --timezone <TIMEZONE>        [env: TIMEZONE=] [default: America/Los_Angeles]
+  -d, --data-folder <DATA_FOLDER>  [env: PUNCHCARD_DATA_FOLDER=.] [default: /home/campbell/.local/share/punchcard]
+  -t, --timezone <TIMEZONE>        [env: PUNCHCARD_TIMEZONE=] [default: America/Los_Angeles]
   -h, --help                       Print help
   -V, --version                    Print version
 ```
