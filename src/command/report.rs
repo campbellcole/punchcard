@@ -17,7 +17,7 @@ use std::{fs::OpenOptions, path::PathBuf, str::FromStr};
 
 use clap::ArgAction;
 use polars::{
-    lazy::dsl::{col, StrpTimeOptions},
+    lazy::dsl::{col, GetOutput, StrpTimeOptions},
     prelude::{Duration, *},
     series::ops::NullBehavior,
 };
@@ -92,6 +92,23 @@ pub struct ReportSettings {
     pub column_colors: Option<Vec<Color>>,
 }
 
+fn map_duration_to_str(s: Series) -> PolarsResult<Option<Series>> {
+    Ok(Some(
+        s.iter()
+            .filter_map(|x| {
+                let AnyValue::Duration(duration, time_unit) = x else {
+                    return None;
+                };
+                assert_eq!(time_unit, TIME_UNIT);
+                let duration = chrono::Duration::nanoseconds(duration);
+                let duration = BiDuration::new(duration);
+                let duration_str = duration.to_friendly_hours_string();
+                Some(duration_str)
+            })
+            .collect(),
+    ))
+}
+
 #[instrument]
 pub fn generate_report(cli_args: &Cli, table_settings: &ReportSettings) -> Result<()> {
     let df = LazyCsvReader::new(cli_args.get_output_file())
@@ -150,12 +167,13 @@ pub fn generate_report(cli_args: &Cli, table_settings: &ReportSettings) -> Resul
         ])
         .select([
             col(COL_TIMESTAMP).alias(RES_WEEK_OF),
-            col(RES_TOTAL_HOURS),
+            col(RES_TOTAL_HOURS).map(map_duration_to_str, GetOutput::from_type(DataType::Utf8)),
             (col(COL_TIMESTAMP) + lit(chrono::Duration::weeks(1))).alias(RES_WEEK_END),
             col(RES_SHIFTS),
             (col(RES_TOTAL_HOURS) / col(RES_SHIFTS))
                 .alias(RES_AVERAGE_SHIFT_DURATION)
-                .cast(DataType::Duration(TIME_UNIT)),
+                .cast(DataType::Duration(TIME_UNIT))
+                .map(map_duration_to_str, GetOutput::from_type(DataType::Utf8)),
         ]);
 
     let mut df = df.collect().wrap_err("Failed to process hours")?;
