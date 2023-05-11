@@ -48,6 +48,9 @@ pub struct ReportSettings {
     /// Only print the table and nothing else
     #[clap(short = 'j', long, default_value_t = false)]
     pub just_table: bool,
+    /// Print exact durations instead of rounded
+    #[clap(long = "exact", default_value_t = false)]
+    pub exact_durations: bool,
     /// The maximum number of characters to display in a string column.
     #[clap(short = 't', long, default_value_t = 32)]
     pub string_truncate: usize,
@@ -109,8 +112,32 @@ fn map_duration_to_str(s: Series) -> PolarsResult<Option<Series>> {
     ))
 }
 
+fn map_duration_to_str_exact(s: Series) -> PolarsResult<Option<Series>> {
+    Ok(Some(
+        s.iter()
+            .filter_map(|x| {
+                let AnyValue::Duration(duration, time_unit) = x else {
+                    return None;
+                };
+                assert_eq!(time_unit, TIME_UNIT);
+                let duration = chrono::Duration::nanoseconds(duration);
+                let duration = BiDuration::new(duration);
+                let (duration, _) = duration.to_std_duration();
+                let duration_str = humantime::format_duration(duration);
+                Some(duration_str.to_string())
+            })
+            .collect(),
+    ))
+}
+
 #[instrument]
 pub fn generate_report(cli_args: &Cli, table_settings: &ReportSettings) -> Result<()> {
+    let map_fn = if table_settings.exact_durations {
+        map_duration_to_str_exact
+    } else {
+        map_duration_to_str
+    };
+
     let df = LazyCsvReader::new(cli_args.get_output_file())
         .finish()
         .wrap_err("Failed to create lazy CSV reader")?
@@ -167,13 +194,13 @@ pub fn generate_report(cli_args: &Cli, table_settings: &ReportSettings) -> Resul
         ])
         .select([
             col(COL_TIMESTAMP).alias(RES_WEEK_OF),
-            col(RES_TOTAL_HOURS).map(map_duration_to_str, GetOutput::from_type(DataType::Utf8)),
+            col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::Utf8)),
             (col(COL_TIMESTAMP) + lit(chrono::Duration::weeks(1))).alias(RES_WEEK_END),
             col(RES_SHIFTS),
             (col(RES_TOTAL_HOURS) / col(RES_SHIFTS))
                 .alias(RES_AVERAGE_SHIFT_DURATION)
                 .cast(DataType::Duration(TIME_UNIT))
-                .map(map_duration_to_str, GetOutput::from_type(DataType::Utf8)),
+                .map(map_fn, GetOutput::from_type(DataType::Utf8)),
         ]);
 
     let mut df = df.collect().wrap_err("Failed to process hours")?;

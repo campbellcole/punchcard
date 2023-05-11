@@ -22,7 +22,7 @@ pub use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 
 pub use chrono_tz::OffsetName;
 
-pub use clap::Args;
+pub use clap::{Args, Subcommand};
 
 pub use crate::biduration::BiDuration;
 pub use crate::common::*;

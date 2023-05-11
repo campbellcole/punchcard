@@ -49,7 +49,7 @@ fn item(s: &mut String, is_first: &mut bool, name: &str, value: u64) {
 }
 
 impl BiDuration {
-    fn to_std_duration(&self) -> (std::time::Duration, Direction) {
+    pub fn to_std_duration(&self) -> (std::time::Duration, Direction) {
         let duration = self.0;
         let (positive_duration, direction) = if **self < Duration::zero() {
             (-duration, Direction::Backward)
@@ -57,6 +57,7 @@ impl BiDuration {
             (duration, Direction::Forward)
         };
         // SAFETY: cannot fail because we've inverted negative durations
+        // and i64::MAX < u64::MAX
         let std_duration = positive_duration.to_std().unwrap();
         (std_duration, direction)
     }
@@ -76,19 +77,20 @@ impl BiDuration {
         let secs = std_duration.as_secs();
 
         if secs == 0 {
-            return "0s".into();
+            return "0 minutes".into();
         }
 
-        let hours = secs / 3600;
-        let hsecs = secs % 3600;
-        let mut minutes = hsecs / 60;
-        let seconds = hsecs % 60;
-        let seconds = (seconds as f64 / 60.0).round() as u64;
-        minutes += seconds;
+        // Round up to the nearest minute
+        let rounded_minutes = ((secs % 60) as f64 / 60.0).round() as u64;
+        // Calculate the total number of minutes in the duration, rounded
+        let minutes = secs / 60 + rounded_minutes;
+        // Calculate how many hours were in those minutes
+        let hours = minutes / 60;
+        // Remove the hours from the minutes so we're left with just hours and minutes
+        let minutes = minutes % 60;
 
         let mut s = String::new();
         let is_first = &mut true;
-        // FIXME: when minutes is 60 we should increment hours
         item(&mut s, is_first, "hour", hours);
         item(&mut s, is_first, "minute", minutes);
 

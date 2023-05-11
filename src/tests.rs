@@ -29,8 +29,8 @@ fn test_parse_biduration() {
         ("in 5h 2m 3s ago", Err(BiDurationParseError::BothDirections)),
     ];
 
-    for (input, output) in cases {
-        assert_eq!(input.parse::<BiDuration>(), output);
+    for (input, expected) in cases {
+        assert_eq!(input.parse::<BiDuration>(), expected);
     }
 }
 
@@ -44,11 +44,32 @@ fn test_format_biduration() {
         ("24d 12h 6m 3s ago", "24days 12h 6m 3s ago"),
     ];
 
-    for input in cases {
+    for (input, expected) in cases {
         assert_eq!(
-            input.0.parse::<BiDuration>().unwrap().to_friendly_string(),
-            input.1
+            input.parse::<BiDuration>().unwrap().to_friendly_string(),
+            expected
         );
+    }
+}
+
+#[test]
+fn test_format_biduration_hours() {
+    let cases = [
+        (
+            BiDuration::new(Duration::nanoseconds(i64::MAX)),
+            "2562047 hours 47 minutes",
+        ),
+        (BiDuration::new(Duration::minutes(100)), "1 hour 40 minutes"),
+        // negative durations are swallowed because we only care about magnitude
+        (BiDuration::new(Duration::minutes(-120)), "2 hours"),
+        (
+            BiDuration::new(Duration::nanoseconds(i64::MIN)),
+            "2562047 hours 47 minutes",
+        ),
+    ];
+
+    for (input, expected) in cases {
+        assert_eq!(input.to_friendly_hours_string(), expected);
     }
 }
 
@@ -60,7 +81,7 @@ fn test_parse_num_rows() {
         ("50", Ok(Quantity::Some(50))),
     ];
 
-    for (input, output) in cases {
-        assert_eq!(input.parse::<Quantity>(), output);
+    for (input, expected) in cases {
+        assert_eq!(input.parse::<Quantity>(), expected);
     }
 }
