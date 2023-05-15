@@ -17,7 +17,7 @@ use std::{fs::OpenOptions, path::PathBuf, str::FromStr};
 
 use clap::ArgAction;
 use polars::{
-    lazy::dsl::{col, GetOutput, StrpTimeOptions},
+    lazy::dsl::{col, GetOutput, StrptimeOptions},
     prelude::{Duration, *},
     series::ops::NullBehavior,
 };
@@ -145,16 +145,18 @@ pub fn generate_report(cli_args: &Cli, table_settings: &ReportSettings) -> Resul
             col(COL_ENTRY_TYPE),
             col(COL_TIMESTAMP)
                 .str()
-                .strptime(StrpTimeOptions {
-                    fmt: Some(CSV_DATETIME_FORMAT.into()),
-                    exact: true,
-                    // we have to use UTC because of PST/PDT, etc.
-                    utc: true,
-                    tz_aware: true,
-                    date_dtype: DataType::Datetime(TIME_UNIT, None),
-                    cache: false,
-                    strict: true,
-                })
+                .strptime(
+                    DataType::Datetime(TIME_UNIT, None),
+                    StrptimeOptions {
+                        format: Some(CSV_DATETIME_FORMAT.into()),
+                        exact: true,
+                        // we have to use UTC because of PST/PDT, etc.
+                        utc: true,
+                        tz_aware: true,
+                        cache: false,
+                        strict: true,
+                    },
+                )
                 // then we cast back to local time
                 .cast(DataType::Datetime(
                     TIME_UNIT,
@@ -176,6 +178,7 @@ pub fn generate_report(cli_args: &Cli, table_settings: &ReportSettings) -> Resul
             },
         )
         .groupby_dynamic(
+            col(COL_TIMESTAMP),
             [],
             DynamicGroupOptions {
                 every: Duration::parse("1w"),

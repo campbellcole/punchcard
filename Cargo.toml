@@ -20,8 +20,8 @@ humantime = "2.1.0"
 iana-time-zone = "0.1.56"
 itertools = "0.10.5"
 owo-colors = "3.5.0"
-polars = { version = "0.28.0", default-features = false, features = [
-    "csv-file",        # for reading/writing CSV files
+polars = { version = "0.29.0", default-features = false, features = [
+    "csv",             # for reading/writing CSV files
     "lazy",            # for LazyFrame
     "timezones",       # for interpreting timezones
     "temporal",        # for operating on temporal data
