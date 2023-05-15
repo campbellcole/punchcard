@@ -19,7 +19,10 @@ use super::clock::ClockEntryArgs;
 #[instrument]
 pub fn get_clock_status(
     cli_args: &Cli,
-    ClockEntryArgs { offset_from_now }: &ClockEntryArgs,
+    ClockEntryArgs {
+        offset_from_now,
+        category,
+    }: &ClockEntryArgs,
 ) -> Result<()> {
     let is_now = offset_from_now.is_none();
     let current_time = {

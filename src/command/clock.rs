@@ -25,13 +25,17 @@ pub struct ClockEntryArgs {
     /// The offset from the current time to use as the clock in/out time
     #[clap(short, long, value_parser = <BiDuration as FromStr>::from_str)]
     pub offset_from_now: Option<BiDuration>,
+    pub category: Option<String>,
 }
 
 #[instrument]
 pub fn add_entry(
     cli_args: &Cli,
     entry_type: EntryType,
-    ClockEntryArgs { offset_from_now }: &ClockEntryArgs,
+    ClockEntryArgs {
+        offset_from_now,
+        category,
+    }: &ClockEntryArgs,
 ) -> Result<()> {
     let timestamp = {
         let now = Local::now();
