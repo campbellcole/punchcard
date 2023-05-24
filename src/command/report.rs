@@ -30,6 +30,7 @@ use crate::{
 
 const TIME_UNIT: TimeUnit = TimeUnit::Nanoseconds;
 
+const COL_CATEGORY: &str = "category";
 const COL_TIMESTAMP: &str = "timestamp";
 const COL_ENTRY_TYPE: &str = "entry_type";
 const COL_DURATION: &str = "duration";

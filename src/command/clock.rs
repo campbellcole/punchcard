@@ -44,35 +44,41 @@ pub fn add_entry(
             .map(|offset| now + **offset)
             .unwrap_or(now)
     };
+    let category = category.as_deref().unwrap_or(DEFAULT_CATEGORY);
 
     let data_file = cli_args.get_output_file();
 
-    let last_entry = get_last_entry(cli_args).wrap_err(ERR_LATEST_ENTRY)?;
+    // continuity checks are broken now that there are categories
+    // because categories, by design, allow for concurrent entries.
+    // gonna have to figure something else out
 
-    // currently cannot allow entries before the latest entry
-    // because that would add a lot of complexity to the code.
-    // basically trying to avoid interpreting the entire file
-    // to make sure that every in has a matching out. this
-    // logic provides the same guarantee but is much simpler.
-    match last_entry.as_ref().map(|e| e.timestamp) {
-        Some(time) if time > timestamp => {
-            return Err(eyre!(
-                "Cannot add an entry before the latest entry at {}",
-                time.format(PRETTY_DATETIME)
-            ));
-        }
-        _ => {}
-    }
+    // let last_entry = get_last_entry(cli_args).wrap_err(ERR_LATEST_ENTRY)?;
 
-    let last_op = last_entry.map(|e| e.entry_type);
+    // // currently cannot allow entries before the latest entry
+    // // because that would add a lot of complexity to the code.
+    // // basically trying to avoid interpreting the entire file
+    // // to make sure that every in has a matching out. this
+    // // logic provides the same guarantee but is much simpler.
+    // match last_entry.as_ref().map(|e| e.timestamp) {
+    //     Some(time) if time > timestamp => {
+    //         return Err(eyre!(
+    //             "Cannot add an entry before the latest entry at {}",
+    //             time.format(PRETTY_DATETIME)
+    //         ));
+    //     }
+    //     _ => {}
+    // }
 
-    if matches!(last_op, Some(op) if op == entry_type) {
-        return Err(eyre!("Already clocked {entry_type}"));
-    }
+    // let last_op = last_entry.map(|e| e.entry_type);
+
+    // if matches!(last_op, Some(op) if op == entry_type) {
+    //     return Err(eyre!("Already clocked {entry_type}"));
+    // }
 
     let entry = Entry {
         entry_type,
         timestamp,
+        category: category.to_string(),
     };
 
     {

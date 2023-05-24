@@ -22,6 +22,7 @@ use crate::prelude::*;
 pub struct Entry {
     pub entry_type: EntryType,
     pub timestamp: DateTime<Local>,
+    pub category: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

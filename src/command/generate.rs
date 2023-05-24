@@ -56,10 +56,18 @@ pub fn generate_test_entries(
     let mut writer = BufWriter::new(file);
 
     writer
-        .write_all(b"entry_type,timestamp\n")
+        .write_all(b"entry_type,timestamp,category\n")
         .wrap_err("Failed to write CSV header")?;
 
+    let categories = vec!["project 1", "project 2", "uncategorized"];
+
     for x in 0..count.unwrap_or(10_000) {
+        let category = match x % 6 {
+            0 | 1 => categories[0],
+            2 | 3 => categories[1],
+            _ => categories[2],
+        };
+
         let entry_type = if x % 2 == 0 { "in" } else { "out" };
 
         let timestamp = if x == 0 {
@@ -73,7 +81,13 @@ pub fn generate_test_entries(
 
         writer
             .write_all(
-                format!("{},{}\n", entry_type, timestamp.format(CSV_DATETIME_FORMAT)).as_bytes(),
+                format!(
+                    "{},{},{}\n",
+                    entry_type,
+                    timestamp.format(CSV_DATETIME_FORMAT),
+                    category
+                )
+                .as_bytes(),
             )
             .wrap_err("Failed to write generated entry to CSV file")?;
 

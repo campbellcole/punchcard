@@ -47,3 +47,5 @@ pub const SLIM_DATETIME: &str = "%r %d %B %Y";
 
 // RFC3339 with nanoseconds, no space between ns and tz
 pub const CSV_DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
+
+pub const DEFAULT_CATEGORY: &str = "uncategorized";
