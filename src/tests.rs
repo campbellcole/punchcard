@@ -13,11 +13,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::path::PathBuf;
+
 use chrono::Duration;
 
-use crate::quantity::{Quantity, QuantityError};
-
-use super::biduration::{BiDuration, BiDurationParseError};
+use crate::types::{BiDuration, BiDurationParseError, Destination, Quantity, QuantityError};
 
 #[test]
 fn test_parse_biduration() {
@@ -66,6 +66,9 @@ fn test_format_biduration_hours() {
             BiDuration::new(Duration::nanoseconds(i64::MIN)),
             "2562047 hours 47 minutes",
         ),
+        (BiDuration::new(Duration::seconds(29)), "0 minutes"),
+        (BiDuration::new(Duration::seconds(30)), "1 minute"),
+        (BiDuration::new(Duration::seconds(0)), "0 minutes"),
     ];
 
     for (input, expected) in cases {
@@ -83,5 +86,20 @@ fn test_parse_num_rows() {
 
     for (input, expected) in cases {
         assert_eq!(input.parse::<Quantity>(), expected);
+    }
+}
+
+#[test]
+fn test_parse_destination() {
+    let cases = [
+        (
+            "/some/random/path",
+            Destination::File(PathBuf::from("/some/random/path")),
+        ),
+        ("-", Destination::Stdout),
+    ];
+
+    for (input, expected) in cases {
+        assert_eq!(input.parse::<Destination>(), Ok(expected));
     }
 }

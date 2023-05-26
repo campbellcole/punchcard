@@ -16,6 +16,8 @@
 use clap::ValueEnum;
 use comfy_table::CellAlignment as CTCellAlignment;
 
+// reimplements the CellAlignment enum with ValueEnum so that it can be used in clap
+
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum CellAlignment {
     Left,

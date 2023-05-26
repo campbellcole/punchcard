@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{fs::File, str::FromStr};
+use std::fs::File;
 
 use chrono_tz::OffsetName;
 use itertools::Itertools;
@@ -23,7 +23,7 @@ use crate::prelude::*;
 #[derive(Debug, Args)]
 pub struct ClockEntryArgs {
     /// The offset from the current time to use as the clock in/out time
-    #[clap(short, long, value_parser = <BiDuration as FromStr>::from_str)]
+    #[clap(short, long)]
     pub offset_from_now: Option<BiDuration>,
 }
 

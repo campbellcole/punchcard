@@ -20,7 +20,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
 use command::generate::GenerateDataArgs;
-use command::{clock::ClockEntryArgs, report::ReportSettings, util::UtilityCommands};
+use command::{clock::ClockEntryArgs, report::ReportSettings};
 use prelude::SUGG_PROPER_PERMS;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -38,13 +38,12 @@ use jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
-pub mod biduration;
 pub mod command;
 pub mod common;
 pub mod csv;
 mod prelude;
-pub mod quantity;
 pub mod table;
+pub mod types;
 
 fn default_timezone() -> Tz {
     let tz = iana_time_zone::get_timezone()
@@ -110,8 +109,6 @@ pub enum Operation {
     /// option to save the report to a file alongside printing it to stdout.
     #[command(name = "report")]
     GenerateReport(ReportSettings),
-    #[command(name = "util")]
-    UtilityCommands(UtilityCommands),
     /// Generate completions for the given shell
     ///
     /// Prints completions to stdout. You will need to pipe these
@@ -157,9 +154,6 @@ fn main() -> Result<()> {
             .wrap_err("Failed to toggle clock status")?,
         Operation::GenerateReport(args) => command::report::generate_report(&cli_args, args)
             .wrap_err("Failed to generate report")?,
-        Operation::UtilityCommands(args) => {
-            command::util::run_utility_command(args).wrap_err("Failed to run utility command")?
-        }
         Operation::GenerateCompletions { shell } => {
             shell.generate(&mut Cli::command(), &mut std::io::stdout());
         }

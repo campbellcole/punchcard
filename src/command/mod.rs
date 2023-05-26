@@ -18,4 +18,3 @@ pub mod clock;
 pub mod generate;
 pub mod report;
 pub mod status;
-pub mod util;

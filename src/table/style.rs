@@ -15,6 +15,8 @@
 
 use clap::ValueEnum;
 
+// store all comfy_table::presets::* in an enum so that it can be used in clap
+
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum TableStyle {
     AsciiFull,

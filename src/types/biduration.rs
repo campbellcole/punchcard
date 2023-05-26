@@ -94,6 +94,10 @@ impl BiDuration {
         item(&mut s, is_first, "hour", hours);
         item(&mut s, is_first, "minute", minutes);
 
+        if s.is_empty() {
+            s.push_str("0 minutes");
+        }
+
         s
     }
 

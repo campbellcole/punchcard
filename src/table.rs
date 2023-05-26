@@ -26,16 +26,19 @@ use comfy_table::{
 };
 use polars::prelude::*;
 
-use crate::{command::report::ReportSettings, prelude::*, table::color::Color};
+use crate::{prelude::*, table::color::Color};
+
+use self::settings::TableSettings;
 
 pub mod cell_alignment;
 pub mod color;
+pub mod settings;
 pub mod style;
 
-pub struct DataFrameDisplay<'a>(&'a DataFrame, &'a ReportSettings);
+pub struct DataFrameDisplay<'a>(&'a DataFrame, &'a TableSettings);
 
 impl<'a> DataFrameDisplay<'a> {
-    pub fn new(df: &'a DataFrame, settings: &'a ReportSettings) -> Self {
+    pub fn new(df: &'a DataFrame, settings: &'a TableSettings) -> Self {
         Self(df, settings)
     }
 }
