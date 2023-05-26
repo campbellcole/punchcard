@@ -169,9 +169,13 @@ impl FromStr for BiDuration {
         };
 
         let (direction, duration_slice) = match (is_explicit_forward, is_backward) {
+            // in .. ago
             (true, true) => return Err(BiDurationParseError::BothDirections),
+            // in ..
             (true, false) => (Direction::Forward, &parts[1..]),
+            // .. ago
             (false, true) => (Direction::Backward, &parts[..parts.len() - 1]),
+            // ..
             (false, false) => (Direction::Forward, &parts[..]),
         };
 
