@@ -14,11 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use rand::prelude::*;
-use std::{
-    fs::OpenOptions,
-    io::{BufWriter, Write},
-    path::PathBuf,
-};
+use std::io::{BufWriter, Write};
 
 use crate::prelude::*;
 
@@ -27,9 +23,9 @@ pub struct GenerateDataArgs {
     /// The number of entries to generate
     #[clap(short, long)]
     pub count: Option<usize>,
-    /// The path to output the CSV file
+    /// The path to output the CSV file, or '-' for stdout
     #[clap(short, long)]
-    pub output_file: Option<PathBuf>,
+    pub output_file: Option<Destination>,
 }
 
 #[instrument]
@@ -44,16 +40,14 @@ pub fn generate_test_entries(
 
     let output_file = output_file
         .clone()
-        .unwrap_or_else(|| cli_args.get_output_file());
-    let file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(&output_file)
-        .wrap_err(ERR_OPEN_CSV(&output_file))
-        .suggestion(SUGG_PROPER_PERMS(&output_file))?;
+        .unwrap_or_else(|| Destination::File(cli_args.get_output_file()));
 
-    let mut writer = BufWriter::new(file);
+    let writer = output_file
+        .to_writer()
+        .wrap_err_with(|| ERR_OPEN_CSV(output_file.unwrap_path()))
+        .with_suggestion(|| SUGG_PROPER_PERMS(output_file.unwrap_path()))?;
+
+    let mut writer = BufWriter::new(writer);
 
     writer
         .write_all(b"entry_type,timestamp\n")
