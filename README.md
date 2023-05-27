@@ -74,7 +74,3 @@ The offset is parsed by the `humantime` crate. It accepts a variety of formats. 
 For a list of all the suffixes, see the documentation for the `humantime` crate:
 
 https://docs.rs/humantime/latest/humantime/fn.parse_duration.html
-
-## Licensing
-
-This program uses the AGPLv3 license to deter use by corporations.
