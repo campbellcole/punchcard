@@ -26,7 +26,10 @@ use comfy_table::{
 };
 use polars::prelude::*;
 
-use crate::{prelude::*, table::color::Color};
+use crate::{
+    prelude::*,
+    table::{color::Color, style::TableStyle},
+};
 
 use self::settings::TableSettings;
 
@@ -273,7 +276,9 @@ impl<'a> Display for DataFrameDisplay<'a> {
             table.set_header(names).set_constraints(constraints);
         }
 
-        if let Some(w) = settings.width {
+        if matches!(settings.style, TableStyle::AsciiMarkdown) {
+            table.set_width(u16::MAX);
+        } else if let Some(w) = settings.width {
             table.set_width(w);
         } else if !table.is_tty() {
             table.set_width(100);
