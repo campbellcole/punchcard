@@ -13,11 +13,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use polars::{
-    lazy::dsl::{col, GetOutput, StrptimeOptions},
-    prelude::{Duration, *},
-    series::ops::NullBehavior,
-};
+use clap::ValueEnum;
+use polars::prelude::*;
 
 // for some reason TimeZone needs to be explicitly imported
 use crate::{
@@ -25,20 +22,19 @@ use crate::{
     table::{settings::TableSettings, DataFrameDisplay},
 };
 
+mod daily;
+mod weekly;
+
 const TIME_UNIT: TimeUnit = TimeUnit::Nanoseconds;
 
 const COL_TIMESTAMP: &str = "timestamp";
 const COL_ENTRY_TYPE: &str = "entry_type";
 const COL_DURATION: &str = "duration";
 
-const RES_TOTAL_HOURS: &str = "Total Hours";
-const RES_WEEK_OF: &str = "Week Of";
-const RES_WEEK_END: &str = "Week End";
-const RES_AVERAGE_SHIFT_DURATION: &str = "Avg. Shift Duration";
-const RES_SHIFTS: &str = "Number of Shifts";
-
 #[derive(Debug, Args)]
 pub struct ReportSettings {
+    #[clap(value_enum, default_value_t = Default::default())]
+    pub report_type: ReportType,
     /// Save the report to a file, or '-' for stdout (ignores the '--num-rows' flag)
     #[clap(short = 'o', long, default_value = None)]
     pub output_file: Option<Destination>,
@@ -50,6 +46,13 @@ pub struct ReportSettings {
     pub exact_durations: bool,
     #[clap(flatten)]
     pub table_settings: TableSettings,
+}
+
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum ReportType {
+    #[default]
+    Weekly,
+    Daily,
 }
 
 fn map_duration_to_str(s: Series) -> PolarsResult<Option<Series>> {
@@ -87,81 +90,44 @@ fn map_duration_to_str_exact(s: Series) -> PolarsResult<Option<Series>> {
     ))
 }
 
+macro_rules! map_fn {
+    ($settings:ident) => {
+        if $settings.exact_durations {
+            crate::command::report::map_duration_to_str_exact
+        } else {
+            crate::command::report::map_duration_to_str
+        }
+    };
+}
+
+pub(crate) use map_fn;
+
+fn map_datetime_to_date_str(s: Series) -> PolarsResult<Option<Series>> {
+    Ok(Some(
+        s.iter()
+            .filter_map(|x| {
+                let AnyValue::Datetime(epoch, time_unit, tz) = x else {
+                    return None;
+                };
+                assert_eq!(time_unit, TIME_UNIT);
+                assert!(matches!(tz, Some(_)));
+                let naive = chrono::NaiveDateTime::from_timestamp_opt(
+                    epoch / 1_000_000_000,
+                    (epoch % 1_000_000_000) as u32,
+                )
+                .unwrap();
+                Some(naive.format("%d %B %Y").to_string())
+            })
+            .collect(),
+    ))
+}
+
 #[instrument]
 pub fn generate_report(cli_args: &Cli, settings: &ReportSettings) -> Result<()> {
-    let map_fn = if settings.exact_durations {
-        map_duration_to_str_exact
-    } else {
-        map_duration_to_str
+    let df = match &settings.report_type {
+        ReportType::Weekly => weekly::generate_weekly_report(cli_args, settings)?,
+        ReportType::Daily => daily::generate_daily_report(cli_args, settings)?,
     };
-
-    let df = LazyCsvReader::new(cli_args.get_output_file())
-        .finish()
-        .wrap_err("Failed to create lazy CSV reader")?
-        .select([
-            col(COL_ENTRY_TYPE),
-            col(COL_TIMESTAMP)
-                .str()
-                .strptime(
-                    DataType::Datetime(TIME_UNIT, None),
-                    StrptimeOptions {
-                        format: Some(CSV_DATETIME_FORMAT.into()),
-                        exact: true,
-                        // we have to use UTC because of PST/PDT, etc.
-                        utc: true,
-                        tz_aware: true,
-                        cache: false,
-                        strict: true,
-                    },
-                )
-                // then we cast back to local time
-                .cast(DataType::Datetime(
-                    TIME_UNIT,
-                    Some(cli_args.timezone.to_string()),
-                )),
-        ])
-        .with_column(
-            col(COL_TIMESTAMP)
-                .diff(1, NullBehavior::Ignore)
-                .alias(COL_DURATION),
-        )
-        .filter(col(COL_ENTRY_TYPE).eq(lit("out")))
-        .sort(
-            COL_TIMESTAMP,
-            SortOptions {
-                descending: false,
-                nulls_last: false,
-                multithreaded: true,
-            },
-        )
-        .groupby_dynamic(
-            col(COL_TIMESTAMP),
-            [],
-            DynamicGroupOptions {
-                every: Duration::parse("1w"),
-                period: Duration::parse("1w"),
-                offset: Duration::parse("0w"),
-                index_column: COL_TIMESTAMP.into(),
-                start_by: StartBy::Monday,
-                closed_window: ClosedWindow::Left,
-                truncate: true,
-                include_boundaries: false,
-            },
-        )
-        .agg([
-            col(COL_DURATION).sum().alias(RES_TOTAL_HOURS),
-            col(COL_DURATION).count().alias(RES_SHIFTS),
-        ])
-        .select([
-            col(COL_TIMESTAMP).alias(RES_WEEK_OF),
-            col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::Utf8)),
-            (col(COL_TIMESTAMP) + lit(chrono::Duration::weeks(1))).alias(RES_WEEK_END),
-            col(RES_SHIFTS),
-            (col(RES_TOTAL_HOURS) / col(RES_SHIFTS))
-                .alias(RES_AVERAGE_SHIFT_DURATION)
-                .cast(DataType::Duration(TIME_UNIT))
-                .map(map_fn, GetOutput::from_type(DataType::Utf8)),
-        ]);
 
     let mut df = df.collect().wrap_err("Failed to process hours")?;
 

@@ -1,7 +1,3 @@
-use std::{fmt::Display, fs::File};
-
-use csv::{Reader, ReaderBuilder};
-
 // Copyright (C) 2023 Campbell M. Cole
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,6 +12,11 @@ use csv::{Reader, ReaderBuilder};
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use std::{fmt::Display, fs::File};
+
+use csv::{Reader, ReaderBuilder};
+
 use crate::prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

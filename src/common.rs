@@ -12,9 +12,15 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #![allow(non_snake_case)]
 
 use std::path::Path;
+
+use color_eyre::{eyre::Context, Result};
+use polars::prelude::{LazyCsvReader, LazyFileListReader, LazyFrame};
+
+use crate::Cli;
 
 pub const ERR_LATEST_ENTRY: &str = "Failed to get latest entry";
 pub const SUGG_REPORT_ISSUE: &str =
@@ -47,3 +53,10 @@ pub const SLIM_DATETIME: &str = "%r %d %B %Y";
 
 // RFC3339 with nanoseconds, no space between ns and tz
 pub const CSV_DATETIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.%f%z";
+
+#[inline(always)]
+pub fn new_reader(cli_args: &Cli) -> Result<LazyFrame> {
+    LazyCsvReader::new(cli_args.get_output_file())
+        .finish()
+        .wrap_err("Failed to create lazy csv reader")
+}
