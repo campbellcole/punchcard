@@ -12,8 +12,9 @@ A simple program to keep track of your hours if you work from home.
 **By default, the program requires nightly to support SIMD.**
 
 ```shell
-$ cargo install
+$ cargo install --git https://github.com/campbellcole/punchcard --branch main
 # or
+$ git clone https://github.com/campbellcole/punchcard && cd punchcard
 $ cargo run --release
 ```
 
