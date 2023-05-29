@@ -4,7 +4,8 @@ A simple program to keep track of your hours if you work from home.
 
 ![clock in stdout](./assets/clock_in.png)
 ![clock status image](./assets/status.png)
-![example report table](./assets/report.png)
+![weekly report table](./assets/weekly.png)
+![daily report table](./assets/daily.png)
 <small>Colors are customizable through arguments on the `report` command. Installing completions is highly recommended to customize the table as there are a lot of options.</small>
 
 ## Installation
