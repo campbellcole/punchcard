@@ -13,6 +13,7 @@ clap = { version = "4.3", features = ["derive", "env"] }
 clap_complete_command = "0.5.1"
 color-eyre = "0.6.2"
 comfy-table = "6.1.4"
+comrak = "0.18.0"
 csv = "1.2.1"
 dirs = "5.0.1"
 dotenvy = "0.15.7"

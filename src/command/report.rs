@@ -22,6 +22,7 @@ use crate::{
     table::{settings::TableSettings, DataFrameDisplay},
 };
 
+mod copyable;
 mod daily;
 mod weekly;
 
@@ -44,6 +45,9 @@ pub struct ReportSettings {
     /// Print exact durations instead of rounded
     #[clap(long = "exact", default_value_t = false)]
     pub exact_durations: bool,
+    /// Generate a page that copies the rich-text report to the clipboard
+    #[clap(long = "copyable", default_value_t = false)]
+    pub copyable: bool,
     #[clap(flatten)]
     pub table_settings: TableSettings,
 }
@@ -128,6 +132,10 @@ pub fn generate_report(cli_args: &Cli, settings: &ReportSettings) -> Result<()> 
         ReportType::Weekly => weekly::generate_weekly_report(cli_args, settings)?,
         ReportType::Daily => daily::generate_daily_report(cli_args, settings)?,
     };
+
+    if settings.copyable {
+        return copyable::generate_copyable_report(df, settings);
+    }
 
     let mut df = df.collect().wrap_err("Failed to process hours")?;
 

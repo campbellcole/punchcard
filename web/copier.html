@@ -1,0 +1,118 @@
+<!--
+ Copyright (C) 2023 Campbell M. Cole
+ 
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as
+ published by the Free Software Foundation, either version 3 of the
+ License, or (at your option) any later version.
+ 
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+ 
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>punchcard report</title>
+    <meta charset="utf-8" />
+    <meta name="description" content="punchcard report" />
+    <meta name="author" content="Campbell M. Cole" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+      }
+      body {
+        background-color: #444;
+      }
+      #hint {
+        position: absolute;
+        top: 155px;
+        left: 350px;
+        border-radius: 10px;
+        border: 1px solid black;
+        background-color: #222;
+        color: white;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 18px;
+        padding: 8px;
+        vertical-align: middle;
+      }
+      #hint-icon {
+        width: 24px;
+        height: 24px;
+      }
+      #hint-note {
+        background-color: #333;
+        border-radius: 5px;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hint">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        id="hint-icon"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18"
+        />
+      </svg>
+      Press 'Allow' to copy the report to the clipboard.
+      <div id="hint-note">
+        <strong
+          >NOTE: You must leave this browser window open until you have pasted
+          the text!</strong
+        >
+      </div>
+    </div>
+  </body>
+  <script>
+    async function queryPermissions() {
+      const writeResult = await navigator.permissions.query({
+        name: "clipboard-write",
+      });
+      console.log(`clipboard-write permission status is ${writeResult.state}`);
+
+      const valids = ["granted", "prompt"];
+
+      if (writeResult.state === "granted" || writeResult.state === "prompt") {
+        doCopy();
+      } else {
+        console.log("no permission");
+      }
+    }
+
+    async function doCopy() {
+      try {
+        const content = "%%REPORT_GOES_HERE%%";
+        const blobInput = new Blob([content], { type: "text/html" });
+        const clipboardItemInput = new ClipboardItem({
+          "text/html": blobInput,
+        });
+        await navigator.clipboard.write([clipboardItemInput]);
+        // window.close();
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    queryPermissions();
+  </script>
+</html>

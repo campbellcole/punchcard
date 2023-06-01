@@ -19,7 +19,7 @@ use crate::prelude::{NumCols, NumRows};
 
 use super::{cell_alignment::CellAlignment, color::Color, style::TableStyle};
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub struct TableSettings {
     /// The maximum number of characters to display in a string column.
     #[clap(short = 't', long, default_value_t = 32)]
@@ -63,4 +63,6 @@ pub struct TableSettings {
     /// The color of each column in the table. Can be applied multiple times, only the first 5 will be used.
     #[clap(long, action = ArgAction::Append)]
     pub column_colors: Option<Vec<Color>>,
+    #[clap(long, action = ArgAction::SetTrue)]
+    pub no_color: bool,
 }

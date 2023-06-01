@@ -78,11 +78,12 @@ fn prepare_row(
     for v in row[row.len() - n_last..].iter() {
         row_str.push(make_str_val(v, str_truncate));
     }
-    row_str
-        .into_iter()
-        .enumerate()
-        .map(|(x, s)| Cell::new(s).fg(colors[x].into()))
-        .collect()
+    let it = row_str.into_iter().enumerate();
+    if colors.is_empty() {
+        it.map(|(_, s)| Cell::new(s)).collect()
+    } else {
+        it.map(|(x, s)| Cell::new(s).fg(colors[x].into())).collect()
+    }
 }
 
 impl<'a> Display for DataFrameDisplay<'a> {
@@ -102,18 +103,22 @@ impl<'a> Display for DataFrameDisplay<'a> {
             Color::DarkBlue,
             Color::DarkCyan,
         ];
-        let column_colors = settings
-            .column_colors
-            .as_ref()
-            .cloned()
-            .map(|mut c| {
-                if c.len() < default_colors.len() {
-                    c.extend(default_colors[c.len()..].iter().cloned());
-                }
-                // if there are more colors, that's fine
-                c
-            })
-            .unwrap_or(default_colors);
+        let column_colors = if !settings.no_color {
+            settings
+                .column_colors
+                .as_ref()
+                .cloned()
+                .map(|mut c| {
+                    if c.len() < default_colors.len() {
+                        c.extend(default_colors[c.len()..].iter().cloned());
+                    }
+                    // if there are more colors, that's fine
+                    c
+                })
+                .unwrap_or(default_colors)
+        } else {
+            Vec::new()
+        };
 
         if let NumRows::Some(num_rows) = &settings.max_n_rows {
             let tdf = df.tail(Some(*num_rows));
@@ -268,10 +273,14 @@ impl<'a> Display for DataFrameDisplay<'a> {
         }
 
         if !(settings.hide_column_names && settings.hide_data_types) {
-            let names = names
-                .into_iter()
-                .map(|s| Cell::new(s).fg(settings.header_color.into()))
-                .collect::<Vec<_>>();
+            let it = names.into_iter();
+
+            let names = if settings.no_color {
+                it.map(Cell::new).collect::<Vec<_>>()
+            } else {
+                it.map(|s| Cell::new(s).fg(settings.header_color.into()))
+                    .collect::<Vec<_>>()
+            };
 
             table.set_header(names).set_constraints(constraints);
         }

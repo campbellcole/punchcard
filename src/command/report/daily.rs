@@ -34,8 +34,6 @@ const RES_SHIFTS: &str = "Number of Shifts";
 
 #[instrument]
 pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Result<LazyFrame> {
-    let map_fn = super::map_fn!(settings);
-
     let now = Local::now();
     let days_to_subtract = now.weekday().num_days_from_monday();
     let last_monday = now - chrono::Duration::days(days_to_subtract as i64);
@@ -44,7 +42,7 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
     let this_week_start = last_monday.date().and_hms_opt(0, 0, 0).unwrap();
     let this_week_end = this_week_start + chrono::Duration::days(7);
 
-    let df = new_reader(cli_args)?
+    let mut df = new_reader(cli_args)?
         .select([
             col(COL_ENTRY_TYPE),
             col(COL_TIMESTAMP)
@@ -103,17 +101,31 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
             col(COL_DURATION).count().alias(RES_SHIFTS),
         ])
         .select([
-            col(COL_TIMESTAMP).alias(RES_DATE).map(
-                map_datetime_to_date_str,
-                GetOutput::from_type(DataType::Utf8),
-            ),
-            col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::Utf8)),
+            col(COL_TIMESTAMP).alias(RES_DATE),
+            col(RES_TOTAL_HOURS),
             col(RES_SHIFTS),
             (col(RES_TOTAL_HOURS) / col(RES_SHIFTS))
                 .alias(RES_AVERAGE_SHIFT_DURATION)
-                .cast(DataType::Duration(TIME_UNIT))
-                .map(map_fn, GetOutput::from_type(DataType::Utf8)),
+                .cast(DataType::Duration(TIME_UNIT)),
         ]);
 
+    if !settings.copyable {
+        df = prepare_for_display(df, settings);
+    }
+
     Ok(df)
+}
+
+pub fn prepare_for_display(df: LazyFrame, settings: &ReportSettings) -> LazyFrame {
+    let map_fn = super::map_fn!(settings);
+
+    df.select([
+        col(RES_DATE).map(
+            map_datetime_to_date_str,
+            GetOutput::from_type(DataType::Utf8),
+        ),
+        col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::Utf8)),
+        col(RES_SHIFTS),
+        col(RES_AVERAGE_SHIFT_DURATION).map(map_fn, GetOutput::from_type(DataType::Utf8)),
+    ])
 }
