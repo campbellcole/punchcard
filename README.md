@@ -19,7 +19,7 @@ $ git clone https://github.com/campbellcole/punchcard && cd punchcard
 $ cargo run --release
 ```
 
-If you are using stable Rust, compile with `--no-default-features --features stable`
+If you are using stable Rust, compile with `--no-default-features --features stable`. The MSRV for stable builds is `1.65.0`. There is no MSRV policy because this program mainly targets nightly, so the MSRV can change at any time.
 
 #### Completions
 

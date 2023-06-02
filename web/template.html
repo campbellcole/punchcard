@@ -90,8 +90,6 @@
       });
       console.log(`clipboard-write permission status is ${writeResult.state}`);
 
-      const valids = ["granted", "prompt"];
-
       if (writeResult.state === "granted" || writeResult.state === "prompt") {
         doCopy();
       } else {

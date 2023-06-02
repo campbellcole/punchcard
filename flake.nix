@@ -23,6 +23,7 @@
             clang
             rust-analyzer
             cargo-outdated
+            cargo-msrv
           ];
 
           buildInputs = [
