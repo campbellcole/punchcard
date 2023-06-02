@@ -52,8 +52,6 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
                     StrptimeOptions {
                         format: Some(CSV_DATETIME_FORMAT.into()),
                         exact: true,
-                        utc: true,
-                        tz_aware: true,
                         cache: false,
                         strict: true,
                     },
@@ -94,6 +92,7 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
                 closed_window: ClosedWindow::Left,
                 truncate: true,
                 include_boundaries: false,
+                check_sorted: true,
             },
         )
         .agg([

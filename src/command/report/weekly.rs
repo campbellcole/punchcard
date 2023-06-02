@@ -43,9 +43,6 @@ pub fn generate_weekly_report(cli_args: &Cli, settings: &ReportSettings) -> Resu
                     StrptimeOptions {
                         format: Some(CSV_DATETIME_FORMAT.into()),
                         exact: true,
-                        // we have to use UTC because of PST/PDT, etc.
-                        utc: true,
-                        tz_aware: true,
                         cache: false,
                         strict: true,
                     },
@@ -82,6 +79,7 @@ pub fn generate_weekly_report(cli_args: &Cli, settings: &ReportSettings) -> Resu
                 closed_window: ClosedWindow::Left,
                 truncate: true,
                 include_boundaries: false,
+                check_sorted: true,
             },
         )
         .agg([
