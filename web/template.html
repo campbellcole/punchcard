@@ -101,7 +101,7 @@
 
     async function doCopy() {
       try {
-        const content = "%%REPORT_GOES_HERE%%";
+        const content = %%REPORT_HTML%%;
         const blobInput = new Blob([content], { type: "text/html" });
         const clipboardItemInput = new ClipboardItem({
           "text/html": blobInput,

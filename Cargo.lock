@@ -1771,7 +1771,7 @@ dependencies = [
 
 [[package]]
 name = "punchcard"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -1791,6 +1791,8 @@ dependencies = [
  "polars",
  "rand",
  "serde",
+ "snailquote",
+ "temp-dir",
  "thiserror",
  "tracing",
  "tracing-error",
@@ -2122,6 +2124,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "snailquote"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec62a949bda7f15800481a711909f946e1204f2460f89210eaf7f57730f88f86"
+dependencies = [
+ "thiserror",
+ "unicode_categories",
+]
+
+[[package]]
 name = "socket2"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2242,6 +2254,12 @@ name = "target-features"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06f6b473c37f9add4cf1df5b4d66a8ef58ab6c895f1a3b3f949cf3e21230140e"
+
+[[package]]
+name = "temp-dir"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af547b166dd1ea4b472165569fc456cfb6818116f854690b0ff205e636523dab"
 
 [[package]]
 name = "terminal_size"
