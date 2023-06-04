@@ -63,6 +63,7 @@ pub struct TableSettings {
     /// The color of each column in the table. Can be applied multiple times, only the first 5 will be used.
     #[clap(long, action = ArgAction::Append)]
     pub column_colors: Option<Vec<Color>>,
+    /// Completely disable emitting ANSI escape codes. Useful for piping to other programs. Enabled automatically for copyable reports.
     #[clap(long, action = ArgAction::SetTrue)]
     pub no_color: bool,
 }
