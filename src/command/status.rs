@@ -70,9 +70,13 @@ pub fn get_clock_status(
                             until.format(SLIM_DATETIME).bold().magenta(),
                             "(".color(gray),
                             // SAFETY: until is always after current_time
-                            humantime::format_duration(duration.to_std().unwrap())
+                            BiDuration::new(duration)
+                                .to_friendly_hours_string()
                                 .bold()
                                 .green(),
+                            //humantime::format_duration(duration.to_std().unwrap())
+                            //    .bold()
+                            //    .green(),
                             ")".color(gray)
                         )
                     } else {
