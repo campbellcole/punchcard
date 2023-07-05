@@ -1,5 +1,9 @@
 *.csv
 *.xl*
 /.direnv
-.env
+# ignore .env file and any file ending in .env
+# this is useful because I frequently move .env to old.env for testing
+# because my .env points to a debugging CSV location and sometimes
+# I want to test with the real CSV
+**.env
 /target

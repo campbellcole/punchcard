@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use chrono::{Datelike, Timelike};
 use polars::{
     prelude::{Duration, *},
     series::ops::NullBehavior,
@@ -31,8 +32,45 @@ const RES_WEEK_END: &str = "Week End";
 const RES_AVERAGE_SHIFT_DURATION: &str = "Avg. Shift Duration";
 const RES_SHIFTS: &str = "Number of Shifts";
 
+#[derive(Debug, Clone, Args, Default)]
+pub struct WeeklyReportArgs {
+    #[clap(short, long, default_value = "all")]
+    /// The month to generate the report for
+    ///
+    /// Accepts a month name (e.g. `January`) or a number (e.g. `1`)
+    /// or `current`, `previous`, or `next`
+    pub month: Month,
+    #[clap(short, long, default_value_t = false)]
+    /// Include shifts that occurred in a previous/upcoming month but
+    /// spill in to or out of this month
+    pub spill_over: bool,
+}
+
 #[instrument]
-pub fn generate_weekly_report(cli_args: &Cli, settings: &ReportSettings) -> Result<LazyFrame> {
+pub fn generate_weekly_report(
+    cli_args: &Cli,
+    settings: &ReportSettings,
+    args: &WeeklyReportArgs,
+) -> Result<LazyFrame> {
+    let range = args.month.as_date().map(|month_start| {
+        let month_end = {
+            let mut date = month_start;
+            date = date.with_month(month_start.month() + 1).unwrap();
+            date -= chrono::Duration::days(1);
+            date = date
+                .with_hour(23)
+                .unwrap()
+                .with_minute(59)
+                .unwrap()
+                .with_second(59)
+                .unwrap()
+                .with_nanosecond(999_999_999)
+                .unwrap();
+            date
+        };
+        (month_start, month_end)
+    });
+
     let mut df = new_reader(cli_args)?
         .select([
             col(COL_ENTRY_TYPE),
@@ -66,7 +104,19 @@ pub fn generate_weekly_report(cli_args: &Cli, settings: &ReportSettings) -> Resu
                 .diff(1, NullBehavior::Ignore)
                 .alias(COL_DURATION),
         )
-        .filter(col(COL_ENTRY_TYPE).eq(lit("out")))
+        .filter(col(COL_ENTRY_TYPE).eq(lit("out")));
+
+    if let Some((month_start, month_end)) = range {
+        if !args.spill_over {
+            df = df.filter(
+                col(COL_TIMESTAMP)
+                    .gt_eq(lit(month_start.timestamp_nanos()))
+                    .and(col(COL_TIMESTAMP).lt(lit(month_end.timestamp_nanos()))),
+            );
+        }
+    }
+
+    df = df
         .groupby_dynamic(
             col(COL_TIMESTAMP),
             [],
@@ -95,6 +145,29 @@ pub fn generate_weekly_report(cli_args: &Cli, settings: &ReportSettings) -> Resu
                 .alias(RES_AVERAGE_SHIFT_DURATION)
                 .cast(DataType::Duration(TIME_UNIT)),
         ]);
+
+    if let Some((month_start, month_end)) = range {
+        if args.spill_over {
+            // this will include any weeks which cross into or out of the month
+            // the first condition checks if the week starts before the month starts
+            // and ends after the month starts
+            // the second condition checks if the week starts before the month ends
+            // and ends after the month ends
+            // the third condition checks if the week is fully contained within the month
+            // which is the default behavior
+            df = df.filter(
+                col(RES_WEEK_OF)
+                    .lt(lit(month_start.timestamp_nanos()))
+                    .and(col(RES_WEEK_END).gt_eq(lit(month_start.timestamp_nanos())))
+                    .or(col(RES_WEEK_OF)
+                        .lt(lit(month_end.timestamp_nanos()))
+                        .and(col(RES_WEEK_END).gt_eq(lit(month_end.timestamp_nanos()))))
+                    .or(col(RES_WEEK_OF)
+                        .gt_eq(lit(month_start.timestamp_nanos()))
+                        .and(col(RES_WEEK_OF).lt(lit(month_end.timestamp_nanos())))),
+            )
+        }
+    }
 
     if !settings.copyable {
         df = prepare_for_display(df, settings);

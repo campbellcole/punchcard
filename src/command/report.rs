@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use clap::ValueEnum;
 use polars::prelude::*;
 
 // for some reason TimeZone needs to be explicitly imported
@@ -34,8 +33,8 @@ const COL_DURATION: &str = "duration";
 
 #[derive(Debug, Args)]
 pub struct ReportSettings {
-    #[clap(value_enum, default_value_t = Default::default())]
-    pub report_type: ReportType,
+    #[clap(subcommand)]
+    pub report_type: Option<ReportType>,
     /// Save the report to a file, or '-' for stdout (ignores the '--num-rows' flag)
     #[clap(short = 'o', long, default_value = None)]
     pub output_file: Option<Destination>,
@@ -52,11 +51,18 @@ pub struct ReportSettings {
     pub table_settings: TableSettings,
 }
 
-#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+#[derive(Debug, Clone, Subcommand)]
 pub enum ReportType {
-    #[default]
-    Weekly,
+    /// Generate a report by week for a given month (default)
+    Weekly(WeeklyReportArgs),
+    /// Generate a report by day for the current week
     Daily,
+}
+
+impl Default for ReportType {
+    fn default() -> Self {
+        Self::Weekly(Default::default())
+    }
 }
 
 fn map_duration_to_str(s: Series) -> PolarsResult<Option<Series>> {
@@ -106,6 +112,8 @@ macro_rules! map_fn {
 
 pub(crate) use map_fn;
 
+use self::weekly::WeeklyReportArgs;
+
 fn map_datetime_to_date_str(s: Series) -> PolarsResult<Option<Series>> {
     Ok(Some(
         s.iter()
@@ -128,8 +136,8 @@ fn map_datetime_to_date_str(s: Series) -> PolarsResult<Option<Series>> {
 
 #[instrument]
 pub fn generate_report(cli_args: &Cli, settings: &ReportSettings) -> Result<()> {
-    let df = match &settings.report_type {
-        ReportType::Weekly => weekly::generate_weekly_report(cli_args, settings)?,
+    let df = match &settings.report_type.as_ref().cloned().unwrap_or_default() {
+        ReportType::Weekly(args) => weekly::generate_weekly_report(cli_args, settings, args)?,
         ReportType::Daily => daily::generate_daily_report(cli_args, settings)?,
     };
 

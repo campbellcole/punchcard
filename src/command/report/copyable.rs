@@ -45,9 +45,9 @@ pub fn generate_copyable_report(lf: LazyFrame, settings: &ReportSettings) -> Res
         ..settings.table_settings.clone()
     };
 
-    let prepped = match settings.report_type {
+    let prepped = match settings.report_type.as_ref().cloned().unwrap_or_default() {
         ReportType::Daily => daily::prepare_for_display(lf.clone(), settings),
-        ReportType::Weekly => weekly::prepare_for_display(lf.clone(), settings),
+        ReportType::Weekly(_) => weekly::prepare_for_display(lf.clone(), settings),
     };
 
     let df = prepped.collect()?;
