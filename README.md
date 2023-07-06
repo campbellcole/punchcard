@@ -1,22 +1,20 @@
 # punchcard
 
-A simple program to keep track of your hours if you work from home.
+A simple program to keep track of working hours.
 
-![clock in stdout](./assets/clock_in.png)
-![clock status image](./assets/status.png)
-![weekly report table](./assets/weekly.png)
-![daily report table](./assets/daily.png)
+![weekly report table](./assets/report_weekly_testdata.png)
 <small>Colors are customizable through arguments on the `report` command. Installing completions is highly recommended to customize the table as there are a lot of options.</small>
 
 ## Installation
 
-**By default, the program requires nightly to support SIMD.**
+**By default, punchcard requires nightly to support SIMD. Must be compiled using the nightly version defined in [the toolchain file](./rust-toolchain.toml).**
 
 ```shell
-$ cargo install --git https://github.com/campbellcole/punchcard --branch main
-# or
-$ git clone https://github.com/campbellcole/punchcard && cd punchcard
-$ cargo run --release
+# on stable Rust
+cargo install punchcard --no-default-features --features stable
+
+# on nightly Rust
+cargo install punchcard
 ```
 
 If you are using stable Rust, compile with `--no-default-features --features stable`. The MSRV for stable builds is `1.65.0`. There is no MSRV policy because this program mainly targets nightly, so the MSRV can change at any time.
@@ -28,7 +26,9 @@ Print the completions file with `punchcard completions <your shell>` and pipe it
 ### Development/Debug builds
 
 ```shell
-$ cargo run --no-default-features --features debug ...
+cargo run --no-default-features --features debug -- <args>
+# or use the helper script which does exactly this:
+./dev.sh -- <args>
 ```
 
 ## Usage
@@ -75,3 +75,35 @@ The offset is parsed by the `humantime` crate. It accepts a variety of formats. 
 For a list of all the suffixes, see the documentation for the `humantime` crate:
 
 https://docs.rs/humantime/latest/humantime/fn.parse_duration.html
+
+## Screenshots
+
+### Clocking In / Out
+
+![clocking in and out](./assets/clock.png)
+
+### Status Checking
+
+![clock status command](./assets/status.png)
+
+### Reports
+
+#### Using the above clock entries
+
+##### Weekly (default)
+
+![weekly report table](./assets/report_weekly.png)
+
+##### Daily
+
+![daily report table](./assets/report_daily.png)
+
+#### Using generated test data
+
+##### Weekly (default)
+
+![weekly report table with test data](./assets/report_weekly_testdata.png)
+
+##### Daily
+
+![daily report table with test data](./assets/report_daily_testdata.png)
