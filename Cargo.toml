@@ -1,6 +1,6 @@
 [package]
 name = "punchcard"
-version = "0.9.1"
+version = "0.9.2"
 edition = "2021"
 authors = ["Campbell M. Cole <pslightjs@gmail.com>"]
 description = "A CLI tool for tracking work-from-home hours."
@@ -19,6 +19,14 @@ keywords = [
     "time-management",
     "punchcard",
     "hours-tracker",
+]
+exclude = [
+    "flake.*",
+    "**/*.sh",
+    ".envrc",
+    ".env.example",
+    "/.vscode",
+    "/assets",
 ]
 
 [dependencies]
