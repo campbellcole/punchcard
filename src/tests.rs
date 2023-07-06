@@ -17,7 +17,9 @@ use std::path::PathBuf;
 
 use chrono::Duration;
 
-use crate::types::{BiDuration, BiDurationParseError, Destination, Quantity, QuantityError};
+use crate::types::{
+    BiDuration, BiDurationParseError, Destination, Month, ParseMonthError, Quantity, QuantityError,
+};
 
 #[test]
 fn test_parse_biduration() {
@@ -101,5 +103,20 @@ fn test_parse_destination() {
 
     for (input, expected) in cases {
         assert_eq!(input.parse::<Destination>(), Ok(expected));
+    }
+}
+
+#[test]
+fn test_parse_month() {
+    let cases = [
+        ("all", Ok(Month::All)),
+        ("2", Ok(Month::February)),
+        ("AugUST", Ok(Month::August)),
+        ("99", Err(ParseMonthError::InvalidMonthNumber(99))),
+        ("foo", Err(ParseMonthError::UnknownMonth("foo".to_string()))),
+    ];
+
+    for (input, expected) in cases {
+        assert_eq!(input.parse::<Month>(), expected);
     }
 }

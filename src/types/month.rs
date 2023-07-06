@@ -106,6 +106,7 @@ impl Month {
 }
 
 #[derive(Debug, Error)]
+#[cfg_attr(test, derive(PartialEq))]
 pub enum ParseMonthError {
     #[error("Month {0} is not a valid month number")]
     InvalidMonthNumber(u8),
