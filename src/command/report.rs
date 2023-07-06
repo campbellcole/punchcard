@@ -53,7 +53,7 @@ pub struct ReportSettings {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ReportType {
-    /// Generate a report by week for a given month (default)
+    /// Generate a report by week for a given month
     Weekly(WeeklyReportArgs),
     /// Generate a report by day for the current week
     Daily,

@@ -19,7 +19,7 @@ use std::{
     str::FromStr,
 };
 
-use chrono::{DateTime, Duration, OutOfRangeError, TimeZone};
+use chrono::{DateTime, Duration, Local, OutOfRangeError, TimeZone};
 use thiserror::Error;
 
 /// A wrapper around the `humantime` crate which allows parsing negative durations.
@@ -130,7 +130,7 @@ impl Deref for BiDuration {
 impl<T: TimeZone> Add<DateTime<T>> for BiDuration {
     type Output = DateTime<T>;
     fn add(self, rhs: DateTime<T>) -> Self::Output {
-        rhs + *self
+        rhs + self.0
     }
 }
 
@@ -188,5 +188,26 @@ impl FromStr for BiDuration {
         };
 
         Ok(Self(chrono_duration))
+    }
+}
+
+pub trait Offset {
+    fn relative_to_now(&self) -> DateTime<Local> {
+        self.relative_to(Local::now())
+    }
+    fn relative_to(&self, other: DateTime<Local>) -> DateTime<Local>;
+}
+
+impl Offset for BiDuration {
+    fn relative_to(&self, other: DateTime<Local>) -> DateTime<Local> {
+        other + **self
+    }
+}
+
+impl Offset for Option<BiDuration> {
+    fn relative_to(&self, other: DateTime<Local>) -> DateTime<Local> {
+        self.as_ref()
+            .map(|offset| other + **offset)
+            .unwrap_or(other)
     }
 }

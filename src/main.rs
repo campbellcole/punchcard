@@ -104,10 +104,12 @@ pub enum Operation {
     ClockStatus(ClockEntryArgs),
     /// Interpret the times and generate a report
     ///
-    /// Processes the entries in the data file and generates a weekly report
-    /// for the past 10 weeks. You can use the '-n' option to change the
-    /// number of weeks to generate a report for. You can also use the '-o'
-    /// option to save the report to a file alongside printing it to stdout.
+    /// Processes the entries in the data file and generates a table.
+    ///
+    /// There are two report types, 'daily' and 'weekly' (defaults to weekly).
+    ///
+    /// The daily report shows the total hours worked each day this week.
+    /// The weekly report shows the total hours worked each week this month.
     #[command(name = "report")]
     GenerateReport(ReportSettings),
     /// Generate completions for the given shell

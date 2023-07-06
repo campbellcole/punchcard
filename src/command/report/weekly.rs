@@ -34,7 +34,7 @@ const RES_SHIFTS: &str = "Number of Shifts";
 
 #[derive(Debug, Clone, Args, Default)]
 pub struct WeeklyReportArgs {
-    #[clap(short, long, default_value = "all")]
+    #[clap(short, long, default_value_t = Default::default())]
     /// The month to generate the report for
     ///
     /// Accepts a month name (e.g. `January`) or a number (e.g. `1`)

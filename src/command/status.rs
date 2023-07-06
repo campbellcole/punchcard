@@ -23,13 +23,7 @@ pub fn get_clock_status(
     ClockEntryArgs { offset_from_now }: &ClockEntryArgs,
 ) -> Result<()> {
     let is_now = offset_from_now.is_none();
-    let current_time = {
-        let now = Local::now();
-        offset_from_now
-            .as_ref()
-            .map(|offset| now + **offset)
-            .unwrap_or(now)
-    };
+    let current_time = offset_from_now.relative_to_now();
 
     let status = get_clock_status_inner(cli_args, current_time)?;
 
@@ -108,13 +102,16 @@ impl ClockStatusType {
 
 #[derive(Debug, Clone)]
 pub struct ClockStatus {
-    status_type: ClockStatusType,
-    current_time: DateTime<Local>,
-    until: Option<DateTime<Local>>,
+    pub status_type: ClockStatusType,
+    pub current_time: DateTime<Local>,
+    pub until: Option<DateTime<Local>>,
 }
 
 #[instrument]
-fn get_clock_status_inner(cli_args: &Cli, current_time: DateTime<Local>) -> Result<ClockStatus> {
+pub fn get_clock_status_inner(
+    cli_args: &Cli,
+    current_time: DateTime<Local>,
+) -> Result<ClockStatus> {
     let output_file = cli_args.get_output_file();
 
     if !output_file.exists() {

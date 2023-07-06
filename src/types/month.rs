@@ -86,6 +86,23 @@ impl Month {
             .unwrap();
         Some(date)
     }
+
+    pub fn to_pretty_string(&self) -> String {
+        use Month::*;
+        match self {
+            All => "all".into(),
+            Current | Previous | Next => {
+                // SAFETY: as_date() only returns None for All, so this is safe
+                let date = self.as_date().unwrap();
+                format!("{} ({})", date.format("%B"), self.to_string())
+            }
+            _ => {
+                // SAFETY: as_date() only returns None for All, so this is safe
+                let date = self.as_date().unwrap();
+                date.format("%B").to_string()
+            }
+        }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -136,7 +153,7 @@ impl FromStr for Month {
                 "october" => Ok(Month::October),
                 "november" => Ok(Month::November),
                 "december" => Ok(Month::December),
-                _ => Err(ParseMonthError::UnknownMonth(s.to_string())),
+                _ => Err(ParseMonthError::UnknownMonth(s.into())),
             }
         }
     }
@@ -146,26 +163,23 @@ impl ToString for Month {
     fn to_string(&self) -> String {
         use Month::*;
         match self {
-            All => "all".into(),
-            Current | Previous | Next => {
-                // SAFETY: as_date() only returns None for All, so this is safe
-                let date = self.as_date().unwrap();
-                format!(
-                    "{} ({})",
-                    date.format("%B"),
-                    match self {
-                        Current => "current",
-                        Previous => "previous",
-                        Next => "next",
-                        _ => unreachable!(),
-                    }
-                )
-            }
-            _ => {
-                // SAFETY: as_date() only returns None for All, so this is safe
-                let date = self.as_date().unwrap();
-                date.format("%B").to_string()
-            }
+            All => "all",
+            Current => "current",
+            Previous => "previous",
+            Next => "next",
+            January => "january",
+            February => "february",
+            March => "march",
+            April => "april",
+            May => "may",
+            June => "june",
+            July => "july",
+            August => "august",
+            September => "september",
+            October => "october",
+            November => "november",
+            December => "december",
         }
+        .into()
     }
 }

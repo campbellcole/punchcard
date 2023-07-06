@@ -16,9 +16,10 @@
 use std::fs::File;
 
 use chrono_tz::OffsetName;
-use itertools::Itertools;
 
 use crate::prelude::*;
+
+use super::status::{get_clock_status_inner, ClockStatus, ClockStatusType};
 
 #[derive(Debug, Args)]
 pub struct ClockEntryArgs {
@@ -28,39 +29,39 @@ pub struct ClockEntryArgs {
 }
 
 #[instrument]
-pub fn add_entry(
+pub fn add_entry(cli_args: &Cli, entry_type: EntryType, args: &ClockEntryArgs) -> Result<()> {
+    let status = get_clock_status_inner(cli_args, args.offset_from_now.relative_to_now())?;
+    add_entry_inner(cli_args, entry_type, args, status)
+}
+
+#[instrument]
+fn add_entry_inner(
     cli_args: &Cli,
     entry_type: EntryType,
     ClockEntryArgs { offset_from_now }: &ClockEntryArgs,
+    status: ClockStatus,
 ) -> Result<()> {
-    let timestamp = {
-        let now = Local::now();
-        offset_from_now
-            .as_ref()
-            .map(|offset| now + **offset)
-            .unwrap_or(now)
-    };
-
-    let data_file = cli_args.get_output_file();
-
-    let last_entry = get_last_entry(cli_args).wrap_err(ERR_LATEST_ENTRY)?;
+    let timestamp = offset_from_now.relative_to_now();
 
     // currently cannot allow entries before the latest entry
     // because that would add a lot of complexity to the code.
     // basically trying to avoid interpreting the entire file
     // to make sure that every in has a matching out. this
     // logic provides the same guarantee but is much simpler.
-    match last_entry.as_ref().map(|e| e.timestamp) {
-        Some(time) if time > timestamp => {
-            return Err(eyre!(
-                "Cannot add an entry before the latest entry at {}",
-                time.format(PRETTY_DATETIME)
-            ));
-        }
-        _ => {}
+    if let Some(until) = status.until {
+        return Err(eyre!(
+            "Adding this entry would violate continuity! There is an entry after the given time.\nTime given: {}\nNext entry: {}",
+            timestamp.format(SLIM_DATETIME),
+            until.format(SLIM_DATETIME),
+        ));
     }
 
-    let last_op = last_entry.map(|e| e.entry_type);
+    let data_file = cli_args.get_output_file();
+
+    let last_op = match status.status_type {
+        ClockStatusType::Entry(entry_type) => Some(entry_type),
+        ClockStatusType::NoDataFile => None,
+    };
 
     if matches!(last_op, Some(op) if op == entry_type) {
         return Err(eyre!("Already clocked {entry_type}"));
@@ -140,38 +141,14 @@ pub fn add_entry(
 
 #[instrument]
 pub fn toggle_clock(cli_args: &Cli, args: &ClockEntryArgs) -> Result<()> {
-    let last_op = get_last_entry(cli_args)
-        .wrap_err(ERR_LATEST_ENTRY)?
-        .map(|e| e.entry_type);
+    let timestamp = args.offset_from_now.relative_to_now();
 
-    match last_op {
-        Some(EntryType::ClockIn) => add_entry(cli_args, EntryType::ClockOut, args),
-        _ => add_entry(cli_args, EntryType::ClockIn, args),
-    }
-}
+    let status = get_clock_status_inner(cli_args, timestamp)?;
 
-#[instrument]
-fn get_last_entry(cli_args: &Cli) -> Result<Option<Entry>> {
-    let data_file = cli_args.get_output_file();
+    let next_op = match status.status_type {
+        ClockStatusType::Entry(EntryType::ClockIn) => EntryType::ClockOut,
+        _ => EntryType::ClockIn,
+    };
 
-    if data_file.exists() {
-        let mut reader = build_reader(cli_args)?;
-        let de = reader.deserialize::<Entry>();
-
-        if let Some(last_entry) = de
-            .filter_map(Result::ok)
-            .sorted_by(|e1, e2| {
-                e1.timestamp
-                    .partial_cmp(&e2.timestamp)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .last()
-        {
-            Ok(Some(last_entry))
-        } else {
-            Ok(None)
-        }
-    } else {
-        Ok(None)
-    }
+    add_entry_inner(cli_args, next_op, args, status)
 }
