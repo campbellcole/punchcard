@@ -122,7 +122,7 @@ fn map_datetime_to_date_str(s: Series) -> PolarsResult<Option<Series>> {
                     return None;
                 };
                 assert_eq!(time_unit, TIME_UNIT);
-                assert!(matches!(tz, Some(_)));
+                assert!(tz.is_some());
                 let naive = chrono::NaiveDateTime::from_timestamp_opt(
                     epoch / 1_000_000_000,
                     (epoch % 1_000_000_000) as u32,

@@ -67,6 +67,7 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
                 descending: false,
                 nulls_last: false,
                 multithreaded: true,
+                maintain_order: false,
             },
         )
         .with_column(

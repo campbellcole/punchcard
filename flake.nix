@@ -27,7 +27,7 @@
           ];
 
           buildInputs = [
-            (rust-bin.nightly."2023-05-12".default.override {
+            (rust-bin.nightly."2023-06-23".default.override {
               extensions = [ "rust-src" ];
             })
           ];

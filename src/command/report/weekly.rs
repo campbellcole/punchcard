@@ -97,6 +97,7 @@ pub fn generate_weekly_report(
                 descending: false,
                 nulls_last: false,
                 multithreaded: true,
+                maintain_order: false,
             },
         )
         .with_column(
