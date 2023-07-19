@@ -60,7 +60,7 @@ fn add_entry_inner(
 
     let last_op = match status.status_type {
         ClockStatusType::Entry(entry_type) => Some(entry_type),
-        ClockStatusType::NoDataFile => None,
+        _ => None,
     };
 
     if matches!(last_op, Some(op) if op == entry_type) {

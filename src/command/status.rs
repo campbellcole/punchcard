@@ -30,56 +30,110 @@ pub fn get_clock_status(
     {
         use owo_colors::{DynColors, OwoColorize};
         let gray = DynColors::Rgb(128, 128, 128);
-        match status.status_type {
-            ClockStatusType::NoDataFile => {
-                println!(
-                    "{}",
-                    "The data file does not exist! Start using punchcard to generate it.".red()
-                );
-            }
-            ClockStatusType::Entry(entry_type) => {
-                println!(
-                    "{}{}{}{}{}",
-                    "You are clocked ".color(gray),
-                    entry_type.colored().bold(),
-                    if is_now {
-                        String::new()
-                    } else {
-                        format!(
-                            " {} {}",
-                            "as of".color(gray),
-                            status
-                                .current_time
-                                .format(SLIM_DATETIME)
-                                .bold()
-                                .yellow()
-                                .to_string()
-                        )
-                    },
-                    if let Some(until) = status.until {
-                        let duration = until - status.current_time;
-                        format!(
-                            " {} {} {}{}{}",
-                            "until".color(gray),
-                            until.format(SLIM_DATETIME).bold().magenta(),
-                            "(".color(gray),
-                            // SAFETY: until is always after current_time
-                            BiDuration::new(duration)
-                                .to_friendly_hours_string()
-                                .bold()
-                                .green(),
-                            //humantime::format_duration(duration.to_std().unwrap())
-                            //    .bold()
-                            //    .green(),
-                            ")".color(gray)
-                        )
-                    } else {
-                        String::new()
-                    },
-                    ".".color(gray)
+        let op = "(".color(gray);
+        let cp = ")".color(gray);
+        let clocked = "Clocked".color(gray);
+
+        let header = format!(
+            "{}{}",
+            "Status Report".bold().bright_magenta(),
+            if is_now {
+                String::from(":")
+            } else {
+                format!(
+                    " {} {} {op}{}{cp}:",
+                    "@".color(gray),
+                    status
+                        .current_time
+                        .format(SLIM_DATETIME)
+                        .bold()
+                        .yellow()
+                        .to_string(),
+                    BiDuration::new(status.current_time - Local::now())
+                        .to_friendly_relative_string()
+                        .magenta()
+                        .bold()
                 )
             }
-        }
+        );
+        let status_str = match status.status_type {
+            ClockStatusType::Entry(entry) => format!("{clocked} {}", entry.colored().bold()),
+            _ => format!(
+                "{clocked} {} {op}{}{cp})",
+                EntryType::ClockOut.colored().bold(),
+                "no entries".cyan()
+            ),
+        };
+        let status_str = format!("   {} {}", "Status:".bold().bright_blue(), status_str);
+        let since = format!(
+            "    {} {}",
+            "Since:".bold().bright_blue(),
+            status
+                .since
+                .map(|since| { format!("{}", since.format(SLIM_DATETIME).bold().blue()) })
+                .unwrap_or_else(|| "N/A".red().to_string())
+        );
+        let until = format!(
+            "    {} {}",
+            "Until:".bold().bright_blue(),
+            status
+                .until
+                .map(|until| { format!("{}", until.format(SLIM_DATETIME).bold().green()) })
+                .unwrap_or_else(|| "N/A".red().to_string())
+        );
+        println!("{}\n{}\n{}\n{}", header, status_str, since, until);
+
+        // match status.status_type {
+        //     ClockStatusType::NoDataFile => {
+        //         println!(
+        //             "{}",
+        //             "The data file does not exist! Start using punchcard to generate it.".red()
+        //         );
+        //     }
+        //     ClockStatusType::NoEntries => {
+        //         println!(
+        //             "{}",
+        //             "There are no clock entries, so you are effectively clocked out.".red()
+        //         )
+        //     }
+        //     ClockStatusType::Entry(entry_type) => {
+        //         println!(
+        //             "{}{}{}{}{}",
+        //             "You are clocked ".color(gray),
+        //             entry_type.colored().bold(),
+        //             if is_now {
+        //                 String::new()
+        //             } else {
+        //                 format!(
+        //                     " {} {}",
+        //                     "as of".color(gray),
+        //                     status
+        //                         .current_time
+        //                         .format(SLIM_DATETIME)
+        //                         .bold()
+        //                         .yellow()
+        //                         .to_string()
+        //                 )
+        //             },
+        //             if let Some(until) = status.until {
+        //                 let duration = until - status.current_time;
+        //                 format!(
+        //                     " {} {} {op}{}{cp}",
+        //                     "until".color(gray),
+        //                     until.format(SLIM_DATETIME).bold().magenta(),
+        //                     // SAFETY: until is always after current_time
+        //                     BiDuration::new(duration)
+        //                         .to_friendly_hours_string()
+        //                         .bold()
+        //                         .green(),
+        //                 )
+        //             } else {
+        //                 String::new()
+        //             },
+        //             ".".color(gray)
+        //         )
+        //     }
+        // }
     }
 
     Ok(())
@@ -88,6 +142,7 @@ pub fn get_clock_status(
 #[derive(Debug, Clone, Copy)]
 pub enum ClockStatusType {
     NoDataFile,
+    NoEntries,
     Entry(EntryType),
 }
 
@@ -95,6 +150,7 @@ impl ClockStatusType {
     pub fn as_string(&self) -> String {
         match self {
             ClockStatusType::NoDataFile => String::new(),
+            ClockStatusType::NoEntries => String::new(),
             ClockStatusType::Entry(e) => e.to_string(),
         }
     }
@@ -104,6 +160,7 @@ impl ClockStatusType {
 pub struct ClockStatus {
     pub status_type: ClockStatusType,
     pub current_time: DateTime<Local>,
+    pub since: Option<DateTime<Local>>,
     pub until: Option<DateTime<Local>>,
 }
 
@@ -118,6 +175,7 @@ pub fn get_clock_status_inner(
         return Ok(ClockStatus {
             status_type: ClockStatusType::NoDataFile,
             current_time,
+            since: None,
             until: None,
         });
     }
@@ -139,17 +197,25 @@ pub fn get_clock_status_inner(
         }
     }
 
-    let status_type = ClockStatusType::Entry(
-        this_entry
-            .map(|e| e.entry_type)
-            .unwrap_or(EntryType::ClockOut),
-    );
+    let Some(this_entry) = this_entry else {
+        return Ok(ClockStatus {
+            status_type: ClockStatusType::NoEntries,
+            current_time,
+            since: None,
+            until: None,
+        })
+    };
+
+    let status_type = ClockStatusType::Entry(this_entry.entry_type);
+
+    let since = Some(this_entry.timestamp);
 
     let until = next_entry.map(|e| e.timestamp);
 
     Ok(ClockStatus {
         status_type,
         current_time,
+        since,
         until,
     })
 }

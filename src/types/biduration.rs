@@ -71,7 +71,7 @@ impl BiDuration {
         }
     }
 
-    pub fn to_friendly_hours_string(&self) -> String {
+    pub fn to_friendly_absolute_string(&self) -> String {
         let (std_duration, _) = self.to_std_duration();
 
         let secs = std_duration.as_secs();
@@ -99,6 +99,15 @@ impl BiDuration {
         }
 
         s
+    }
+
+    pub fn to_friendly_relative_string(&self) -> String {
+        let absolute = self.to_friendly_absolute_string();
+        if **self < Duration::zero() {
+            format!("{absolute} ago")
+        } else {
+            format!("in {absolute}")
+        }
     }
 
     /// Convert a `std::time::Duration` and a direction into a `BiDuration`.

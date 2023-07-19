@@ -75,7 +75,7 @@ fn map_duration_to_str(s: Series) -> PolarsResult<Option<Series>> {
                 assert_eq!(time_unit, TIME_UNIT);
                 let duration = chrono::Duration::nanoseconds(duration);
                 let duration = BiDuration::new(duration);
-                let duration_str = duration.to_friendly_hours_string();
+                let duration_str = duration.to_friendly_absolute_string();
                 Some(duration_str)
             })
             .collect(),

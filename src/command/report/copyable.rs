@@ -75,7 +75,7 @@ pub fn generate_copyable_report(lf: LazyFrame, settings: &ReportSettings) -> Res
     let total_hours = df.column("Total Hours").unwrap().sum::<i64>().unwrap();
     let total_hours = chrono::Duration::nanoseconds(total_hours);
     let total_hours = BiDuration::new(total_hours);
-    let total_hours_str = total_hours.to_friendly_hours_string();
+    let total_hours_str = total_hours.to_friendly_absolute_string();
 
     template = template.replace(TOTAL_HOURS_PLACEHOLDER, &total_hours_str);
 

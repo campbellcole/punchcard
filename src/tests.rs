@@ -74,7 +74,7 @@ fn test_format_biduration_hours() {
     ];
 
     for (input, expected) in cases {
-        assert_eq!(input.to_friendly_hours_string(), expected);
+        assert_eq!(input.to_friendly_absolute_string(), expected);
     }
 }
 
