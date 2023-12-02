@@ -31,6 +31,8 @@ const COL_TIMESTAMP: &str = "timestamp";
 const COL_ENTRY_TYPE: &str = "entry_type";
 const COL_DURATION: &str = "duration";
 
+const NANOSECOND_OVERFLOW_MESSAGE: &str = "why are you using this 500 years in the future?";
+
 #[derive(Debug, Args)]
 pub struct ReportSettings {
     #[clap(subcommand)]
@@ -190,7 +192,7 @@ pub fn generate_report(cli_args: &Cli, settings: &ReportSettings) -> Result<()> 
             .wrap_err_with(|| ERR_OPEN_CSV(output_file.unwrap_path()))
             .with_suggestion(|| SUGG_PROPER_PERMS(output_file.unwrap_path()))?;
         CsvWriter::new(writer)
-            .has_header(true)
+            .include_header(true)
             .finish(&mut df)
             .wrap_err_with(|| ERR_WRITE_CSV(output_file.unwrap_path()))?;
     }

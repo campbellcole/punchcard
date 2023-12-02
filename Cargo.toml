@@ -36,21 +36,21 @@ clap = { version = "4.3", features = ["derive", "env"] }
 clap_complete_command = "0.5.1"
 color-eyre = "0.6.2"
 comfy-table = "7.0.1"
-comrak = "0.18.0"
+comrak = "0.20.0"
 csv = "1.2.1"
 dirs = "5.0.1"
 dotenvy = "0.15.7"
 humantime = "2.1.0"
 iana-time-zone = "0.1.56"
 owo-colors = "3.5.0"
-polars = { version = "0.31.1", default-features = false, features = [
-    "csv",             # for reading/writing CSV files
-    "lazy",            # for LazyFrame
-    "timezones",       # for interpreting timezones
-    "temporal",        # for operating on temporal data
-    "diff",            # for diffing rows to find durations
-    "dynamic_groupby", # for resampling by week
-    "strings",         # for parsing strings to dates
+polars = { version = "0.35.4", default-features = false, features = [
+    "csv",              # for reading/writing CSV files
+    "lazy",             # for LazyFrame
+    "timezones",        # for interpreting timezones
+    "temporal",         # for operating on temporal data
+    "diff",             # for diffing rows to find durations
+    "dynamic_group_by", # for resampling by week
+    "strings",          # for parsing strings to dates
 ] }
 rand = { version = "0.8.5", optional = true }
 serde = { version = "1", features = ["derive"] }

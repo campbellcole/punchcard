@@ -23,7 +23,7 @@ use crate::prelude::*;
 
 use super::{
     map_datetime_to_date_str, ReportSettings, COL_DURATION, COL_ENTRY_TYPE, COL_TIMESTAMP,
-    TIME_UNIT,
+    NANOSECOND_OVERFLOW_MESSAGE, TIME_UNIT,
 };
 
 const RES_TOTAL_HOURS: &str = "Total Hours";
@@ -84,6 +84,7 @@ pub fn generate_weekly_report(
                         cache: false,
                         strict: true,
                     },
+                    lit("1970-01-01T00:00:00.0000000Z"),
                 )
                 // then we cast back to local time
                 .cast(DataType::Datetime(
@@ -111,14 +112,20 @@ pub fn generate_weekly_report(
         if !args.spill_over {
             df = df.filter(
                 col(COL_TIMESTAMP)
-                    .gt_eq(lit(month_start.timestamp_nanos()))
-                    .and(col(COL_TIMESTAMP).lt(lit(month_end.timestamp_nanos()))),
+                    .gt_eq(lit(month_start
+                        .timestamp_nanos_opt()
+                        .expect(NANOSECOND_OVERFLOW_MESSAGE)))
+                    .and(
+                        col(COL_TIMESTAMP).lt(lit(month_end
+                            .timestamp_nanos_opt()
+                            .expect(NANOSECOND_OVERFLOW_MESSAGE))),
+                    ),
             );
         }
     }
 
     df = df
-        .groupby_dynamic(
+        .group_by_dynamic(
             col(COL_TIMESTAMP),
             [],
             DynamicGroupOptions {
@@ -128,7 +135,7 @@ pub fn generate_weekly_report(
                 index_column: COL_TIMESTAMP.into(),
                 start_by: StartBy::Monday,
                 closed_window: ClosedWindow::Left,
-                truncate: true,
+                label: Label::Left,
                 include_boundaries: false,
                 check_sorted: true,
             },
@@ -158,14 +165,32 @@ pub fn generate_weekly_report(
             // which is the default behavior
             df = df.filter(
                 col(RES_WEEK_OF)
-                    .lt(lit(month_start.timestamp_nanos()))
-                    .and(col(RES_WEEK_END).gt_eq(lit(month_start.timestamp_nanos())))
+                    .lt(lit(month_start
+                        .timestamp_nanos_opt()
+                        .expect(NANOSECOND_OVERFLOW_MESSAGE)))
+                    .and(
+                        col(RES_WEEK_END).gt_eq(lit(month_start
+                            .timestamp_nanos_opt()
+                            .expect(NANOSECOND_OVERFLOW_MESSAGE))),
+                    )
                     .or(col(RES_WEEK_OF)
-                        .lt(lit(month_end.timestamp_nanos()))
-                        .and(col(RES_WEEK_END).gt_eq(lit(month_end.timestamp_nanos()))))
+                        .lt(lit(month_end
+                            .timestamp_nanos_opt()
+                            .expect(NANOSECOND_OVERFLOW_MESSAGE)))
+                        .and(
+                            col(RES_WEEK_END).gt_eq(lit(month_end
+                                .timestamp_nanos_opt()
+                                .expect(NANOSECOND_OVERFLOW_MESSAGE))),
+                        ))
                     .or(col(RES_WEEK_OF)
-                        .gt_eq(lit(month_start.timestamp_nanos()))
-                        .and(col(RES_WEEK_OF).lt(lit(month_end.timestamp_nanos())))),
+                        .gt_eq(lit(month_start
+                            .timestamp_nanos_opt()
+                            .expect(NANOSECOND_OVERFLOW_MESSAGE)))
+                        .and(
+                            col(RES_WEEK_OF).lt(lit(month_end
+                                .timestamp_nanos_opt()
+                                .expect(NANOSECOND_OVERFLOW_MESSAGE))),
+                        )),
             )
         }
     }
