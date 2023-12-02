@@ -55,7 +55,7 @@ pub fn generate_weekly_report(
     let range = args.month.as_date().map(|month_start| {
         let month_end = {
             let mut date = month_start;
-            date = date.with_month(month_start.month() + 1).unwrap();
+            date = date.with_month((month_start.month() % 12) + 1).unwrap();
             date -= chrono::Duration::days(1);
             date = date
                 .with_hour(23)
