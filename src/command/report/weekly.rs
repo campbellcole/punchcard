@@ -56,7 +56,18 @@ pub fn generate_weekly_report(
         let month_end = {
             let mut date = month_start;
             date = date.with_month((month_start.month() % 12) + 1).unwrap();
+
+            // subtracting 1 day will get us to the last day of the previous month
+            // however, in december this causes the year to roll back to the previous year
+            // because `date`, before this line, is <year>-01-01, so after this line it becomes
+            // <year-1>-12-31
             date -= chrono::Duration::days(1);
+
+            // so we add the year back on if this happened
+            if month_start.month() == 12 {
+                date = date.with_year(date.year() + 1).unwrap();
+            }
+
             date = date
                 .with_hour(23)
                 .unwrap()
@@ -70,6 +81,7 @@ pub fn generate_weekly_report(
         };
         (month_start, month_end)
     });
+    trace!(?range);
 
     let mut df = new_reader(cli_args)?
         .select([
