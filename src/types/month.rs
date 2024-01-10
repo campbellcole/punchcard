@@ -42,39 +42,47 @@ pub enum Month {
 
 impl Month {
     pub fn as_date(&self) -> Option<chrono::DateTime<Local>> {
-        use Month::*;
-        let month_num = match self {
-            All => return None,
-            Current => Local::now().month(),
-            Previous => {
+        use Month as M;
+        let year = Local::now().year();
+        let (month_num, year) = match self {
+            M::All => return None,
+            M::Current => (Local::now().month(), year),
+            M::Previous => {
                 let mut date = Local::now();
                 date = date.with_day(1).unwrap();
                 date -= chrono::Duration::days(1);
-                date.month()
+                (date.month(), date.year())
             }
-            Next => {
+            M::Next => {
                 let mut date = Local::now();
                 date = date.with_day(1).unwrap();
                 date += chrono::Duration::days(32);
-                date.month()
+                (date.month(), date.year())
             }
-            January => 1,
-            February => 2,
-            March => 3,
-            April => 4,
-            May => 5,
-            June => 6,
-            July => 7,
-            August => 8,
-            September => 9,
-            October => 10,
-            November => 11,
-            December => 12,
+            explicit => {
+                let explicit_month = match explicit {
+                    M::January => 1,
+                    M::February => 2,
+                    M::March => 3,
+                    M::April => 4,
+                    M::May => 5,
+                    M::June => 6,
+                    M::July => 7,
+                    M::August => 8,
+                    M::September => 9,
+                    M::October => 10,
+                    M::November => 11,
+                    M::December => 12,
+                    _ => unreachable!("All, Current, Previous, and Next are handled above"),
+                };
+                (explicit_month, year)
+            }
         };
 
         let mut date = Local::now();
         date = date.with_day(1).unwrap();
         date = date.with_month(month_num).unwrap();
+        date = date.with_year(year).unwrap();
         date = date
             .with_hour(0)
             .unwrap()
