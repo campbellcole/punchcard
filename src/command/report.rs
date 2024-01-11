@@ -165,14 +165,11 @@ pub fn generate_report(cli_args: &Cli, settings: &ReportSettings) -> Result<()> 
                 "{} {}{}{} {} {}",
                 PRETTY_TIME.magenta().bold(),
                 "(".color(dark_gray),
-                format!(
-                    "{}",
-                    cli_args
-                        .timezone
-                        .offset_from_utc_date(&Utc::now().date_naive())
-                        .abbreviation()
-                )
-                .blue(),
+                cli_args
+                    .timezone
+                    .offset_from_utc_date(&Utc::now().date_naive())
+                    .abbreviation()
+                    .blue(),
                 ")".color(dark_gray),
                 "on".color(dark_gray),
                 PRETTY_DATE.cyan().bold(),

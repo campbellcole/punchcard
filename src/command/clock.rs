@@ -91,14 +91,11 @@ fn add_entry_inner(
                 "{} {}{}{} {} {}",
                 PRETTY_TIME.magenta().bold(),
                 oparen,
-                format!(
-                    "{}",
-                    cli_args
-                        .timezone
-                        .offset_from_utc_date(&Utc::now().date_naive())
-                        .abbreviation()
-                )
-                .blue(),
+                cli_args
+                    .timezone
+                    .offset_from_utc_date(&Utc::now().date_naive())
+                    .abbreviation()
+                    .blue(),
                 cparen,
                 "on".color(gray),
                 PRETTY_DATE.cyan().bold(),

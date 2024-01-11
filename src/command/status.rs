@@ -43,12 +43,7 @@ pub fn get_clock_status(
                 format!(
                     " {} {} {op}{}{cp}:",
                     "@".color(gray),
-                    status
-                        .current_time
-                        .format(SLIM_DATETIME)
-                        .bold()
-                        .yellow()
-                        .to_string(),
+                    status.current_time.format(SLIM_DATETIME).bold().yellow(),
                     BiDuration::new(status.current_time - Local::now())
                         .to_friendly_relative_string()
                         .magenta()
@@ -203,7 +198,7 @@ pub fn get_clock_status_inner(
             current_time,
             since: None,
             until: None,
-        })
+        });
     };
 
     let status_type = ClockStatusType::Entry(this_entry.entry_type);

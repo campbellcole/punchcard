@@ -42,8 +42,8 @@ dirs = "5.0.1"
 dotenvy = "0.15.7"
 humantime = "2.1.0"
 iana-time-zone = "0.1.56"
-owo-colors = "3.5.0"
-polars = { version = "0.35.4", default-features = false, features = [
+owo-colors = "4.0.0"
+polars = { version = "0.36.2", default-features = false, features = [
     "csv",              # for reading/writing CSV files
     "lazy",             # for LazyFrame
     "timezones",        # for interpreting timezones
@@ -72,7 +72,7 @@ debug = ["generate_test_data", "nightly"]
 # enables the generation of test data
 generate_test_data = ["rand"]
 
-nightly = ["polars/nightly", "rand/nightly", "rand/simd_support"]
+nightly = ["polars/nightly"]
 performant = ["polars/performant"]
 
 [profile.release]

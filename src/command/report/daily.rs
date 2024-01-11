@@ -129,10 +129,10 @@ pub fn prepare_for_display(df: LazyFrame, settings: &ReportSettings) -> LazyFram
     df.select([
         col(RES_DATE).map(
             map_datetime_to_date_str,
-            GetOutput::from_type(DataType::Utf8),
+            GetOutput::from_type(DataType::String),
         ),
-        col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::Utf8)),
+        col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::String)),
         col(RES_SHIFTS),
-        col(RES_AVERAGE_SHIFT_DURATION).map(map_fn, GetOutput::from_type(DataType::Utf8)),
+        col(RES_AVERAGE_SHIFT_DURATION).map(map_fn, GetOutput::from_type(DataType::String)),
     ])
 }

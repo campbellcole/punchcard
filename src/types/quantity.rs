@@ -46,7 +46,7 @@ impl FromStr for Quantity {
     type Err = QuantityError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.parse::<usize>() {
-            Ok(num) if num == 0 => Err(QuantityError::Zero),
+            Ok(0) => Err(QuantityError::Zero),
             Ok(num) => Ok(Quantity::Some(num)),
             Err(_) if s.eq_ignore_ascii_case("all") => Ok(Quantity::All),
             Err(_) => Err(QuantityError::Unknown),
