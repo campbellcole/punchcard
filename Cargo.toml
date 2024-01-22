@@ -1,6 +1,6 @@
 [package]
 name = "punchcard"
-version = "0.10.4"
+version = "0.10.5"
 edition = "2021"
 authors = ["Campbell M. Cole <pslightjs@gmail.com>"]
 description = "A CLI tool for tracking work-from-home hours."
@@ -44,13 +44,14 @@ humantime = "2.1.0"
 iana-time-zone = "0.1.56"
 owo-colors = "4.0.0"
 polars = { version = "0.36.2", default-features = false, features = [
-    "csv",              # for reading/writing CSV files
-    "lazy",             # for LazyFrame
-    "timezones",        # for interpreting timezones
-    "temporal",         # for operating on temporal data
-    "diff",             # for diffing rows to find durations
-    "dynamic_group_by", # for resampling by week
-    "strings",          # for parsing strings to dates
+    "csv",               # for reading/writing CSV files
+    "lazy",              # for LazyFrame
+    "timezones",         # for interpreting timezones
+    "temporal",          # for operating on temporal data
+    "diff",              # for diffing rows to find durations
+    "dynamic_group_by",  # for resampling by week
+    "strings",           # for parsing strings to dates
+    "horizontal_concat", # temporary fix for https://github.com/pola-rs/polars/issues/13684
 ] }
 rand = { version = "0.8.5", optional = true }
 serde = { version = "1", features = ["derive"] }

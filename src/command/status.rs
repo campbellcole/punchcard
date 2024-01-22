@@ -65,7 +65,15 @@ pub fn get_clock_status(
             "Since:".bold().bright_blue(),
             status
                 .since
-                .map(|since| { format!("{}", since.format(SLIM_DATETIME).bold().blue()) })
+                .map(|since| {
+                    let offset_from_now = BiDuration::new(since - status.current_time);
+                    format!(
+                        "{}\n        {} {}",
+                        since.format(SLIM_DATETIME).blue(),
+                        "->".bold().color(gray),
+                        offset_from_now.to_friendly_relative_string().yellow()
+                    )
+                })
                 .unwrap_or_else(|| "N/A".red().to_string())
         );
         let until = format!(
@@ -73,7 +81,7 @@ pub fn get_clock_status(
             "Until:".bold().bright_blue(),
             status
                 .until
-                .map(|until| { format!("{}", until.format(SLIM_DATETIME).bold().green()) })
+                .map(|until| { format!("{}", until.format(SLIM_DATETIME).green()) })
                 .unwrap_or_else(|| "N/A".red().to_string())
         );
         println!("{}\n{}\n{}\n{}", header, status_str, since, until);
