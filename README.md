@@ -17,7 +17,7 @@ cargo install punchcard --no-default-features --features stable
 cargo install punchcard
 ```
 
-If you are using stable Rust, compile with `--no-default-features --features stable`. The MSRV for stable builds is `1.70.0`. There is no MSRV policy because this program mainly targets nightly, so the MSRV can change at any time.
+If you are using stable Rust, compile with `--no-default-features --features stable`. The MSRV for stable builds is `1.71.1`. There is no MSRV policy because this program mainly targets nightly, so the MSRV can change at any time.
 
 #### Completions
 
