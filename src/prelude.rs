@@ -18,7 +18,7 @@ pub use color_eyre::{
     Help, Result,
 };
 
-pub use chrono::{DateTime, Duration, Local, TimeZone, Utc};
+pub use chrono::{DateTime, Local, TimeZone, Utc};
 
 pub use chrono_tz::OffsetName;
 
