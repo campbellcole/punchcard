@@ -34,15 +34,21 @@ const RES_SHIFTS: &str = "Number of Shifts";
 
 #[derive(Debug, Clone, Args, Default)]
 pub struct WeeklyReportArgs {
-    #[clap(short, long, default_value_t = Default::default())]
     /// The month to generate the report for
     ///
     /// Accepts a month name (e.g. `January`) or a number (e.g. `1`) or
     /// `current`, `previous`, or `next`
+    #[clap(short, long, default_value_t = Default::default())]
     pub month: Month,
-    #[clap(short, long, default_value_t = false)]
+    /// The year to generate the report for
+    ///
+    /// Accepts an absolute year (e.g. `2026`) or a negative number offset (e.g.
+    /// `-2`) which will be subtracted from the current year.
+    #[clap(short, long, default_value = None)]
+    pub year: Option<Year>,
     /// Include shifts that occurred in a previous/upcoming month but spill in
     /// to or out of this month
+    #[clap(short, long, default_value_t = false)]
     pub spill_over: bool,
 }
 
@@ -52,8 +58,8 @@ pub fn generate_weekly_report(
     settings: &ReportSettings,
     args: &WeeklyReportArgs,
 ) -> Result<LazyFrame> {
-    let range = args.month.as_date().map(|month_start| {
-        let month_end = {
+    let range = args.month.as_date().map(|mut month_start| {
+        let mut month_end = {
             let mut date = month_start;
             date = date.with_month((month_start.month() % 12) + 1).unwrap();
 
@@ -79,6 +85,15 @@ pub fn generate_weekly_report(
                 .unwrap();
             date
         };
+
+        if let Some(year) = args.year {
+            let year = year.value();
+
+            // SAFETY: `Year::value` is guaranteed to be representable by chrono
+            month_start = month_start.with_year(year).unwrap();
+            month_end = month_end.with_year(year).unwrap();
+        }
+
         (month_start, month_end)
     });
     trace!(?range);
