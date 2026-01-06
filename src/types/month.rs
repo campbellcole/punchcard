@@ -1,19 +1,19 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use chrono::{Datelike, Local, Timelike};
 use thiserror::Error;
@@ -102,7 +102,7 @@ impl Month {
             Current | Previous | Next => {
                 // SAFETY: as_date() only returns None for All, so this is safe
                 let date = self.as_date().unwrap();
-                format!("{} ({})", date.format("%B"), self.to_string())
+                format!("{} ({})", date.format("%B"), self)
             }
             _ => {
                 // SAFETY: as_date() only returns None for All, so this is safe
@@ -168,27 +168,28 @@ impl FromStr for Month {
     }
 }
 
-impl ToString for Month {
-    fn to_string(&self) -> String {
-        use Month::*;
-        match self {
-            All => "all",
-            Current => "current",
-            Previous => "previous",
-            Next => "next",
-            January => "january",
-            February => "february",
-            March => "march",
-            April => "april",
-            May => "may",
-            June => "june",
-            July => "july",
-            August => "august",
-            September => "september",
-            October => "october",
-            November => "november",
-            December => "december",
-        }
-        .into()
+impl Display for Month {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Month as M;
+        let s = match self {
+            M::All => "all",
+            M::Current => "current",
+            M::Previous => "previous",
+            M::Next => "next",
+            M::January => "january",
+            M::February => "february",
+            M::March => "march",
+            M::April => "april",
+            M::May => "may",
+            M::June => "june",
+            M::July => "july",
+            M::August => "august",
+            M::September => "september",
+            M::October => "october",
+            M::November => "november",
+            M::December => "december",
+        };
+
+        write!(f, "{}", s)
     }
 }

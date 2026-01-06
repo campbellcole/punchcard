@@ -1,19 +1,20 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// adapted from https://github.com/pola-rs/polars/blob/9a73d3c7fd53180917837280b23b33f9de251887/polars/polars-core/src/fmt.rs
+// adapted from
+// https://github.com/pola-rs/polars/blob/9a73d3c7fd53180917837280b23b33f9de251887/polars/polars-core/src/fmt.rs
 
 use std::{
     borrow::Cow,
@@ -21,8 +22,8 @@ use std::{
 };
 
 use comfy_table::{
-    modifiers::{UTF8_ROUND_CORNERS, UTF8_SOLID_INNER_BORDERS},
     Cell, ColumnConstraint, ContentArrangement, Table, Width,
+    modifiers::{UTF8_ROUND_CORNERS, UTF8_SOLID_INNER_BORDERS},
 };
 use polars::prelude::*;
 
@@ -78,21 +79,23 @@ fn prepare_row(
     for v in row[row.len() - n_last..].iter() {
         row_str.push(make_str_val(v, str_truncate));
     }
-    let it = row_str.into_iter().enumerate();
+    let it = row_str.into_iter();
     if colors.is_empty() {
-        it.map(|(_, s)| Cell::new(s)).collect()
+        it.map(Cell::new).collect()
     } else {
-        it.map(|(x, s)| Cell::new(s).fg(colors[x].into())).collect()
+        it.enumerate()
+            .map(|(x, s)| Cell::new(s).fg(colors[x].into()))
+            .collect()
     }
 }
 
 impl<'a> Display for DataFrameDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut df = self.0;
-        // we have to have this here because we can't return a reference
-        // to tdf because it's a local variable, so we need to store it
-        // somewhere and hold a reference to it, and rust doesn't realize
-        // the reference to ref_holder is being used
+        // we have to have this here because we can't return a reference to tdf
+        // because it's a local variable, so we need to store it somewhere and
+        // hold a reference to it, and rust doesn't realize the reference to
+        // ref_holder is being used
         #[allow(unused_assignments)]
         let mut ref_holder = None;
         let settings = &self.1;
@@ -142,7 +145,7 @@ impl<'a> Display for DataFrameDisplay<'a> {
         };
 
         let (n_first, n_last) = if df.width() > max_n_cols {
-            ((max_n_cols + 1) / 2, max_n_cols / 2)
+            (max_n_cols.div_ceil(2), max_n_cols / 2)
         } else {
             (df.width(), 0)
         };
@@ -231,7 +234,7 @@ impl<'a> Display for DataFrameDisplay<'a> {
                 let dots = rows[0].iter().map(|_| Cell::new("…")).collect();
                 rows.push(dots);
                 if max_n_rows > 1 {
-                    for i in (height - (max_n_rows + 1) / 2)..height {
+                    for i in (height - max_n_rows.div_ceil(2))..height {
                         let row = df
                             .get_columns()
                             .iter()

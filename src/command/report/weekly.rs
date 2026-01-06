@@ -1,14 +1,14 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -22,8 +22,8 @@ use polars::{
 use crate::prelude::*;
 
 use super::{
-    map_datetime_to_date_str, ReportSettings, COL_DURATION, COL_ENTRY_TYPE, COL_TIMESTAMP,
-    NANOSECOND_OVERFLOW_MESSAGE, TIME_UNIT,
+    COL_DURATION, COL_ENTRY_TYPE, COL_TIMESTAMP, NANOSECOND_OVERFLOW_MESSAGE, ReportSettings,
+    TIME_UNIT, map_datetime_to_date_str,
 };
 
 const RES_TOTAL_HOURS: &str = "Total Hours";
@@ -37,12 +37,12 @@ pub struct WeeklyReportArgs {
     #[clap(short, long, default_value_t = Default::default())]
     /// The month to generate the report for
     ///
-    /// Accepts a month name (e.g. `January`) or a number (e.g. `1`)
-    /// or `current`, `previous`, or `next`
+    /// Accepts a month name (e.g. `January`) or a number (e.g. `1`) or
+    /// `current`, `previous`, or `next`
     pub month: Month,
     #[clap(short, long, default_value_t = false)]
-    /// Include shifts that occurred in a previous/upcoming month but
-    /// spill in to or out of this month
+    /// Include shifts that occurred in a previous/upcoming month but spill in
+    /// to or out of this month
     pub spill_over: bool,
 }
 
@@ -57,10 +57,10 @@ pub fn generate_weekly_report(
             let mut date = month_start;
             date = date.with_month((month_start.month() % 12) + 1).unwrap();
 
-            // subtracting 1 day will get us to the last day of the previous month
-            // however, in december this causes the year to roll back to the previous year
-            // because `date`, before this line, is <year>-01-01, so after this line it becomes
-            // <year-1>-12-31
+            // subtracting 1 day will get us to the last day of the previous
+            // month however, in december this causes the year to roll back to
+            // the previous year because `date`, before this line, is
+            // <year>-01-01, so after this line it becomes <year-1>-12-31
             date -= chrono::Duration::days(1);
 
             // so we add the year back on if this happened
@@ -120,20 +120,20 @@ pub fn generate_weekly_report(
         )
         .filter(col(COL_ENTRY_TYPE).eq(lit("out")));
 
-    if let Some((month_start, month_end)) = range {
-        if !args.spill_over {
-            df = df.filter(
-                col(COL_TIMESTAMP)
-                    .gt_eq(lit(month_start
+    if let Some((month_start, month_end)) = range
+        && !args.spill_over
+    {
+        df = df.filter(
+            col(COL_TIMESTAMP)
+                .gt_eq(lit(month_start
+                    .timestamp_nanos_opt()
+                    .expect(NANOSECOND_OVERFLOW_MESSAGE)))
+                .and(
+                    col(COL_TIMESTAMP).lt(lit(month_end
                         .timestamp_nanos_opt()
-                        .expect(NANOSECOND_OVERFLOW_MESSAGE)))
-                    .and(
-                        col(COL_TIMESTAMP).lt(lit(month_end
-                            .timestamp_nanos_opt()
-                            .expect(NANOSECOND_OVERFLOW_MESSAGE))),
-                    ),
-            );
-        }
+                        .expect(NANOSECOND_OVERFLOW_MESSAGE))),
+                ),
+        );
     }
 
     df = df
@@ -166,45 +166,44 @@ pub fn generate_weekly_report(
                 .cast(DataType::Duration(TIME_UNIT)),
         ]);
 
-    if let Some((month_start, month_end)) = range {
-        if args.spill_over {
-            // this will include any weeks which cross into or out of the month
-            // the first condition checks if the week starts before the month starts
-            // and ends after the month starts
-            // the second condition checks if the week starts before the month ends
-            // and ends after the month ends
-            // the third condition checks if the week is fully contained within the month
-            // which is the default behavior
-            df = df.filter(
-                col(RES_WEEK_OF)
-                    .lt(lit(month_start
+    if let Some((month_start, month_end)) = range
+        && args.spill_over
+    {
+        // this will include any weeks which cross into or out of the month the
+        // first condition checks if the week starts before the month starts and
+        // ends after the month starts the second condition checks if the week
+        // starts before the month ends and ends after the month ends the third
+        // condition checks if the week is fully contained within the month
+        // which is the default behavior
+        df = df.filter(
+            col(RES_WEEK_OF)
+                .lt(lit(month_start
+                    .timestamp_nanos_opt()
+                    .expect(NANOSECOND_OVERFLOW_MESSAGE)))
+                .and(
+                    col(RES_WEEK_END).gt_eq(lit(month_start
+                        .timestamp_nanos_opt()
+                        .expect(NANOSECOND_OVERFLOW_MESSAGE))),
+                )
+                .or(col(RES_WEEK_OF)
+                    .lt(lit(month_end
                         .timestamp_nanos_opt()
                         .expect(NANOSECOND_OVERFLOW_MESSAGE)))
                     .and(
-                        col(RES_WEEK_END).gt_eq(lit(month_start
+                        col(RES_WEEK_END).gt_eq(lit(month_end
                             .timestamp_nanos_opt()
                             .expect(NANOSECOND_OVERFLOW_MESSAGE))),
-                    )
-                    .or(col(RES_WEEK_OF)
-                        .lt(lit(month_end
+                    ))
+                .or(col(RES_WEEK_OF)
+                    .gt_eq(lit(month_start
+                        .timestamp_nanos_opt()
+                        .expect(NANOSECOND_OVERFLOW_MESSAGE)))
+                    .and(
+                        col(RES_WEEK_OF).lt(lit(month_end
                             .timestamp_nanos_opt()
-                            .expect(NANOSECOND_OVERFLOW_MESSAGE)))
-                        .and(
-                            col(RES_WEEK_END).gt_eq(lit(month_end
-                                .timestamp_nanos_opt()
-                                .expect(NANOSECOND_OVERFLOW_MESSAGE))),
-                        ))
-                    .or(col(RES_WEEK_OF)
-                        .gt_eq(lit(month_start
-                            .timestamp_nanos_opt()
-                            .expect(NANOSECOND_OVERFLOW_MESSAGE)))
-                        .and(
-                            col(RES_WEEK_OF).lt(lit(month_end
-                                .timestamp_nanos_opt()
-                                .expect(NANOSECOND_OVERFLOW_MESSAGE))),
-                        )),
-            )
-        }
+                            .expect(NANOSECOND_OVERFLOW_MESSAGE))),
+                    )),
+        )
     }
 
     if !settings.copyable {

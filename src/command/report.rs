@@ -1,14 +1,14 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -18,7 +18,7 @@ use polars::prelude::*;
 // for some reason TimeZone needs to be explicitly imported
 use crate::{
     prelude::{TimeZone, *},
-    table::{settings::TableSettings, DataFrameDisplay},
+    table::{DataFrameDisplay, settings::TableSettings},
 };
 
 mod copyable;
@@ -37,7 +37,8 @@ const NANOSECOND_OVERFLOW_MESSAGE: &str = "why are you using this 500 years in t
 pub struct ReportSettings {
     #[clap(subcommand)]
     pub report_type: Option<ReportType>,
-    /// Save the report to a file, or '-' for stdout (ignores the '--num-rows' flag)
+    /// Save the report to a file, or '-' for stdout (ignores the '--num-rows'
+    /// flag)
     #[clap(short = 'o', long, default_value = None)]
     pub output_file: Option<Destination>,
     /// Only print the table and nothing else
@@ -125,11 +126,11 @@ fn map_datetime_to_date_str(s: Series) -> PolarsResult<Option<Series>> {
                 };
                 assert_eq!(time_unit, TIME_UNIT);
                 assert!(tz.is_some());
-                let naive = chrono::NaiveDateTime::from_timestamp_opt(
-                    epoch / 1_000_000_000,
-                    (epoch % 1_000_000_000) as u32,
-                )
-                .unwrap();
+                let naive =
+                    DateTime::from_timestamp(epoch / 1_000_000_000, (epoch % 1_000_000_000) as u32)
+                        .as_ref()
+                        .map(DateTime::naive_utc)
+                        .unwrap();
                 Some(naive.format("%d %B %Y").to_string())
             })
             .collect(),
@@ -169,6 +170,7 @@ pub fn generate_report(cli_args: &Cli, settings: &ReportSettings) -> Result<()> 
                     .timezone
                     .offset_from_utc_date(&Utc::now().date_naive())
                     .abbreviation()
+                    .unwrap_or("???")
                     .blue(),
                 ")".color(dark_gray),
                 "on".color(dark_gray),

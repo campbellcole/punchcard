@@ -1,14 +1,14 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -22,6 +22,7 @@ use color_eyre::{eyre::Context, Help, Result};
 #[cfg(feature = "generate_test_data")]
 use command::generate::GenerateDataArgs;
 use command::{clock::ClockEntryArgs, report::ReportSettings};
+use mimalloc::MiMalloc;
 use prelude::SUGG_PROPER_PERMS;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
@@ -32,12 +33,8 @@ extern crate serde;
 #[macro_use]
 extern crate tracing;
 
-#[cfg(not(target_env = "msvc"))]
-use jemallocator::Jemalloc;
-
-#[cfg(not(target_env = "msvc"))]
 #[global_allocator]
-static GLOBAL: Jemalloc = Jemalloc;
+static GLOBAL: MiMalloc = MiMalloc;
 
 pub mod command;
 pub mod common;
@@ -77,29 +74,28 @@ impl Cli {
 pub enum Operation {
     /// Clock in
     ///
-    /// Adds a clock-in entry to the data file with the current time,
-    /// or the time given with the '-o' flag.
+    /// Adds a clock-in entry to the data file with the current time, or the
+    /// time given with the '-o' flag.
     #[command(name = "in")]
     ClockIn(ClockEntryArgs),
     /// Clock out
     ///
-    /// Adds a clock-out entry to the data file with the current time,
-    /// or the time given with the '-o' flag.
+    /// Adds a clock-out entry to the data file with the current time, or the
+    /// time given with the '-o' flag.
     #[command(name = "out")]
     ClockOut(ClockEntryArgs),
     /// Clock either in or out
     ///
-    /// Clocks in or out depending on what was done last. Override
-    /// the time used with the '-o' flag.
+    /// Clocks in or out depending on what was done last. Override the time used
+    /// with the '-o' flag.
     #[command(name = "toggle")]
     ClockToggle(ClockEntryArgs),
     /// Check the current status
     ///
-    /// Prints whether or not you are clocked in right now, and
-    /// will also print when the next entry occurs, if applicable.
-    /// You can also use the '-o' option to override
-    /// the time checked, so you can check if you were/will be clocked
-    /// in/out at a certain time.
+    /// Prints whether or not you are clocked in right now, and will also print
+    /// when the next entry occurs, if applicable. You can also use the '-o'
+    /// option to override the time checked, so you can check if you were/will
+    /// be clocked in/out at a certain time.
     #[command(name = "status")]
     ClockStatus(ClockEntryArgs),
     /// Interpret the times and generate a report
@@ -108,14 +104,14 @@ pub enum Operation {
     ///
     /// There are two report types, 'daily' and 'weekly' (defaults to weekly).
     ///
-    /// The daily report shows the total hours worked each day this week.
-    /// The weekly report shows the total hours worked each week this month.
+    /// The daily report shows the total hours worked each day this week. The
+    /// weekly report shows the total hours worked each week this month.
     #[command(name = "report")]
     GenerateReport(ReportSettings),
     /// Generate completions for the given shell
     ///
-    /// Prints completions to stdout. You will need to pipe these
-    /// to a file, and where that file goes depends on your shell.
+    /// Prints completions to stdout. You will need to pipe these to a file, and
+    /// where that file goes depends on your shell.
     #[command(name = "completions")]
     GenerateCompletions {
         #[clap(value_enum)]

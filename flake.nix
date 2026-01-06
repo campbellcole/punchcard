@@ -21,7 +21,6 @@
           nativeBuildInputs = [
             pkg-config
             clang
-            rust-analyzer
             cargo-outdated
             cargo-msrv
           ];

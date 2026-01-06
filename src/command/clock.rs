@@ -1,14 +1,14 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -19,7 +19,7 @@ use chrono_tz::OffsetName;
 
 use crate::prelude::*;
 
-use super::status::{get_clock_status_inner, ClockStatus, ClockStatusType};
+use super::status::{ClockStatus, ClockStatusType, get_clock_status_inner};
 
 #[derive(Debug, Args)]
 pub struct ClockEntryArgs {
@@ -43,11 +43,10 @@ fn add_entry_inner(
 ) -> Result<()> {
     let timestamp = offset_from_now.relative_to_now();
 
-    // currently cannot allow entries before the latest entry
-    // because that would add a lot of complexity to the code.
-    // basically trying to avoid interpreting the entire file
-    // to make sure that every in has a matching out. this
-    // logic provides the same guarantee but is much simpler.
+    // currently cannot allow entries before the latest entry because that would
+    // add a lot of complexity to the code. basically trying to avoid
+    // interpreting the entire file to make sure that every in has a matching
+    // out. this logic provides the same guarantee but is much simpler.
     if let Some(until) = status.until {
         return Err(eyre!(
             "Adding this entry would violate continuity! There is an entry after the given time.\nTime given: {}\nNext entry: {}",
@@ -73,11 +72,11 @@ fn add_entry_inner(
     };
 
     {
-        // this is in a block because owo_colors adds functions to almost every type
-        // and it's super annoying to have it in scope all the time
+        // this is in a block because owo_colors adds functions to almost every
+        // type and it's super annoying to have it in scope all the time
         use owo_colors::{DynColors, OwoColorize};
-        // print this before saving because we have to move it
-        // and I'm trying to avoid unnecessary cloning
+        // print this before saving because we have to move it and I'm trying to
+        // avoid unnecessary cloning
         let gray = DynColors::Rgb(128, 128, 128);
         let oparen = "(".color(gray);
         let cparen = ")".color(gray);
@@ -95,6 +94,7 @@ fn add_entry_inner(
                     .timezone
                     .offset_from_utc_date(&Utc::now().date_naive())
                     .abbreviation()
+                    .unwrap_or("???")
                     .blue(),
                 cparen,
                 "on".color(gray),
