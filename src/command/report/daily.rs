@@ -1,30 +1,29 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use chrono::Datelike;
 use polars::{
-    lazy::dsl::GetOutput,
-    prelude::{Duration, *},
+    prelude::{Duration, TimeZone, *},
     series::ops::NullBehavior,
 };
 
 use crate::prelude::*;
 
 use super::{
-    map_datetime_to_date_str, ReportSettings, COL_DURATION, COL_ENTRY_TYPE, COL_TIMESTAMP,
-    NANOSECOND_OVERFLOW_MESSAGE, TIME_UNIT,
+    COL_DURATION, COL_ENTRY_TYPE, COL_TIMESTAMP, NANOSECOND_OVERFLOW_MESSAGE, ReportSettings,
+    TIME_UNIT, map_datetime_to_date_str,
 };
 
 const RES_TOTAL_HOURS: &str = "Total Hours";
@@ -55,25 +54,28 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
                         cache: false,
                         strict: true,
                     },
-                    lit("1970-01-01T00:00:00.0000000Z"),
+                    lit("raise"),
                 )
                 .cast(DataType::Datetime(
                     TIME_UNIT,
-                    Some("America/Los_Angeles".into()),
+                    Some(TimeZone::from_chrono(
+                        &"America/Los_Angeles".parse().unwrap(),
+                    )),
                 )),
         ])
         .sort(
-            COL_TIMESTAMP,
-            SortOptions {
-                descending: false,
-                nulls_last: false,
+            [COL_TIMESTAMP],
+            SortMultipleOptions {
+                descending: vec![false],
+                nulls_last: vec![false],
                 multithreaded: true,
                 maintain_order: false,
+                limit: None,
             },
         )
         .with_column(
             col(COL_TIMESTAMP)
-                .diff(1, NullBehavior::Ignore)
+                .diff(lit(1), NullBehavior::Ignore)
                 .alias(COL_DURATION),
         )
         .filter(
@@ -100,7 +102,6 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
                 closed_window: ClosedWindow::Left,
                 label: Label::Left,
                 include_boundaries: false,
-                check_sorted: true,
             },
         )
         .agg([
@@ -111,7 +112,7 @@ pub fn generate_daily_report(cli_args: &Cli, settings: &ReportSettings) -> Resul
             col(COL_TIMESTAMP).alias(RES_DATE),
             col(RES_TOTAL_HOURS),
             col(RES_SHIFTS),
-            (col(RES_TOTAL_HOURS) / col(RES_SHIFTS))
+            (col(RES_TOTAL_HOURS).cast(DataType::UInt64) / col(RES_SHIFTS))
                 .alias(RES_AVERAGE_SHIFT_DURATION)
                 .cast(DataType::Duration(TIME_UNIT)),
         ]);
@@ -127,12 +128,9 @@ pub fn prepare_for_display(df: LazyFrame, settings: &ReportSettings) -> LazyFram
     let map_fn = super::map_fn!(settings);
 
     df.select([
-        col(RES_DATE).map(
-            map_datetime_to_date_str,
-            GetOutput::from_type(DataType::String),
-        ),
-        col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::String)),
+        col(RES_DATE).map(map_datetime_to_date_str, super::coerce_output_type),
+        col(RES_TOTAL_HOURS).map(map_fn, super::coerce_output_type),
         col(RES_SHIFTS),
-        col(RES_AVERAGE_SHIFT_DURATION).map(map_fn, GetOutput::from_type(DataType::String)),
+        col(RES_AVERAGE_SHIFT_DURATION).map(map_fn, super::coerce_output_type),
     ])
 }

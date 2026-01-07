@@ -23,6 +23,7 @@
             clang
             cargo-outdated
             cargo-msrv
+            cargo-udeps
           ];
 
           buildInputs = [

@@ -163,9 +163,9 @@ impl<'a> Display for DataFrameDisplay<'a> {
             let column_data_type = if settings.hide_data_types {
                 String::new()
             } else if settings.inline_data_types | settings.hide_column_names {
-                format!("{}", f.data_type())
+                format!("{}", f.dtype())
             } else {
-                format!("\n{}", f.data_type())
+                format!("\n{}", f.dtype())
             };
             let mut column_separator = "\n---";
             if settings.hide_column_separator
@@ -221,7 +221,7 @@ impl<'a> Display for DataFrameDisplay<'a> {
                     let row = df
                         .get_columns()
                         .iter()
-                        .map(|s| s.str_value(i).unwrap())
+                        .map(|s| s.get(i).unwrap().str_value())
                         .collect();
                     rows.push(prepare_row(
                         row,
@@ -238,7 +238,7 @@ impl<'a> Display for DataFrameDisplay<'a> {
                         let row = df
                             .get_columns()
                             .iter()
-                            .map(|s| s.str_value(i).unwrap())
+                            .map(|s| s.get(i).unwrap().str_value())
                             .collect();
                         rows.push(prepare_row(
                             row,
@@ -256,7 +256,7 @@ impl<'a> Display for DataFrameDisplay<'a> {
                         let row = df
                             .get_columns()
                             .iter()
-                            .map(|s| s.str_value(i).unwrap())
+                            .map(|s| s.get(i).unwrap().str_value())
                             .collect();
                         table.add_row(prepare_row(
                             row,

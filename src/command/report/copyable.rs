@@ -1,14 +1,14 @@
 // Copyright (C) 2023 Campbell M. Cole
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU Affero General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option) any
+// later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+// details.
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -23,10 +23,10 @@ use snailquote::escape;
 
 use crate::{
     prelude::*,
-    table::{settings::TableSettings, style::TableStyle, DataFrameDisplay},
+    table::{DataFrameDisplay, settings::TableSettings, style::TableStyle},
 };
 
-use super::{daily, weekly, ReportSettings, ReportType};
+use super::{ReportSettings, ReportType, daily, weekly};
 
 const MARKDOWN_TEMPLATE: &str = include_str!("../../../web/template.md");
 const HTML_TEMPLATE: &str = include_str!("../../../web/template.html");
@@ -69,10 +69,16 @@ pub fn generate_copyable_report(lf: LazyFrame, settings: &ReportSettings) -> Res
 
     template = template.replace(REPORT_TABLE_PLACEHOLDER, &table);
 
-    // this table retains original data types so we can use it to calculate the total hours
+    // this table retains original data types so we can use it to calculate the
+    // total hours
     let df = lf.collect()?;
 
-    let total_hours = df.column("Total Hours").unwrap().sum::<i64>().unwrap();
+    let total_hours = df
+        .column("Total Hours")
+        .unwrap()
+        .as_materialized_series()
+        .sum::<i64>()
+        .unwrap();
     let total_hours = chrono::Duration::nanoseconds(total_hours);
     let total_hours = BiDuration::new(total_hours);
     let total_hours_str = total_hours.to_friendly_absolute_string();

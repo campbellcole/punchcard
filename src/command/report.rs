@@ -68,39 +68,43 @@ impl Default for ReportType {
     }
 }
 
-fn map_duration_to_str(s: Series) -> PolarsResult<Option<Series>> {
-    Ok(Some(
-        s.iter()
-            .filter_map(|x| {
-                let AnyValue::Duration(duration, time_unit) = x else {
-                    return None;
-                };
-                assert_eq!(time_unit, TIME_UNIT);
-                let duration = chrono::Duration::nanoseconds(duration);
-                let duration = BiDuration::new(duration);
-                let duration_str = duration.to_friendly_absolute_string();
-                Some(duration_str)
-            })
-            .collect(),
-    ))
+fn map_duration_to_str(c: Column) -> PolarsResult<Column> {
+    let values = c
+        .as_materialized_series()
+        .iter()
+        .filter_map(|x| {
+            let AnyValue::Duration(duration, time_unit) = x else {
+                return None;
+            };
+            assert_eq!(time_unit, TIME_UNIT);
+            let duration = chrono::Duration::nanoseconds(duration);
+            let duration = BiDuration::new(duration);
+            let duration_str = duration.to_friendly_absolute_string();
+            Some(duration_str)
+        })
+        .collect::<Vec<_>>();
+
+    Ok(Column::new(c.name().clone(), values))
 }
 
-fn map_duration_to_str_exact(s: Series) -> PolarsResult<Option<Series>> {
-    Ok(Some(
-        s.iter()
-            .filter_map(|x| {
-                let AnyValue::Duration(duration, time_unit) = x else {
-                    return None;
-                };
-                assert_eq!(time_unit, TIME_UNIT);
-                let duration = chrono::Duration::nanoseconds(duration);
-                let duration = BiDuration::new(duration);
-                let (duration, _) = duration.to_std_duration();
-                let duration_str = humantime::format_duration(duration);
-                Some(duration_str.to_string())
-            })
-            .collect(),
-    ))
+fn map_duration_to_str_exact(c: Column) -> PolarsResult<Column> {
+    let values = c
+        .as_materialized_series()
+        .iter()
+        .filter_map(|x| {
+            let AnyValue::Duration(duration, time_unit) = x else {
+                return None;
+            };
+            assert_eq!(time_unit, TIME_UNIT);
+            let duration = chrono::Duration::nanoseconds(duration);
+            let duration = BiDuration::new(duration);
+            let (duration, _) = duration.to_std_duration();
+            let duration_str = humantime::format_duration(duration);
+            Some(duration_str.to_string())
+        })
+        .collect::<Vec<_>>();
+
+    Ok(Column::new(c.name().clone(), values))
 }
 
 macro_rules! map_fn {
@@ -117,24 +121,32 @@ pub(crate) use map_fn;
 
 use self::weekly::WeeklyReportArgs;
 
-fn map_datetime_to_date_str(s: Series) -> PolarsResult<Option<Series>> {
-    Ok(Some(
-        s.iter()
-            .filter_map(|x| {
-                let AnyValue::Datetime(epoch, time_unit, tz) = x else {
-                    return None;
-                };
-                assert_eq!(time_unit, TIME_UNIT);
-                assert!(tz.is_some());
-                let naive =
-                    DateTime::from_timestamp(epoch / 1_000_000_000, (epoch % 1_000_000_000) as u32)
-                        .as_ref()
-                        .map(DateTime::naive_utc)
-                        .unwrap();
-                Some(naive.format("%d %B %Y").to_string())
-            })
-            .collect(),
-    ))
+fn map_datetime_to_date_str(c: Column) -> PolarsResult<Column> {
+    let values = c
+        .as_materialized_series()
+        .iter()
+        .filter_map(|x| {
+            let AnyValue::Datetime(epoch, time_unit, tz) = x else {
+                return None;
+            };
+            assert_eq!(time_unit, TIME_UNIT);
+            assert!(tz.is_some());
+            let naive =
+                DateTime::from_timestamp(epoch / 1_000_000_000, (epoch % 1_000_000_000) as u32)
+                    .as_ref()
+                    .map(DateTime::naive_utc)
+                    .unwrap();
+            Some(naive.format("%d %B %Y").to_string())
+        })
+        .collect::<Vec<_>>();
+
+    Ok(Column::new(c.name().clone(), values))
+}
+
+fn coerce_output_type(_s: &Schema, f: &Field) -> PolarsResult<Field> {
+    let mut f = f.to_physical();
+    f.coerce(DataType::String);
+    Ok(f)
 }
 
 #[instrument]

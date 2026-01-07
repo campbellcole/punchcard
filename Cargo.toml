@@ -36,22 +36,21 @@ clap = { version = "4.3", features = ["derive", "env"] }
 clap_complete_command = "0.6"
 color-eyre = "0.6.2"
 comfy-table = "7.0.1"
-comrak = "0.20.0"
 csv = "1.2.1"
 dirs = "6.0.0"
 dotenvy = "0.15.7"
 humantime = "2.1.0"
 iana-time-zone = "0.1.56"
 owo-colors = "4.0.0"
-polars = { version = "0.36.2", default-features = false, features = [
-    "csv",               # for reading/writing CSV files
-    "lazy",              # for LazyFrame
-    "timezones",         # for interpreting timezones
-    "temporal",          # for operating on temporal data
-    "diff",              # for diffing rows to find durations
-    "dynamic_group_by",  # for resampling by week
-    "strings",           # for parsing strings to dates
-    "horizontal_concat", # temporary fix for https://github.com/pola-rs/polars/issues/13684
+polars = { version = "0.52.0", default-features = false, features = [
+    "csv",              # for reading/writing CSV files
+    "lazy",             # for LazyFrame
+    "timezones",        # for interpreting timezones
+    "temporal",         # for operating on temporal data
+    "diff",             # for diffing rows to find durations
+    "dynamic_group_by", # for resampling by week
+    "strings",          # for parsing strings to dates
+    "abs",              # fixes missing match arm compile error
 ] }
 rand = { version = "0.9", optional = true }
 serde = { version = "1", features = ["derive"] }

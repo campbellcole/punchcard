@@ -15,7 +15,7 @@
 
 use chrono::{Datelike, Timelike};
 use polars::{
-    prelude::{Duration, *},
+    prelude::{Duration, TimeZone, *},
     series::ops::NullBehavior,
 };
 
@@ -111,26 +111,27 @@ pub fn generate_weekly_report(
                         cache: false,
                         strict: true,
                     },
-                    lit("1970-01-01T00:00:00.0000000Z"),
+                    lit("raise"),
                 )
                 // then we cast back to local time
                 .cast(DataType::Datetime(
                     TIME_UNIT,
-                    Some(cli_args.timezone.to_string()),
+                    Some(TimeZone::from_chrono(&cli_args.timezone)),
                 )),
         ])
         .sort(
-            COL_TIMESTAMP,
-            SortOptions {
-                descending: false,
-                nulls_last: false,
+            [COL_TIMESTAMP],
+            SortMultipleOptions {
+                descending: vec![false],
+                nulls_last: vec![false],
                 multithreaded: true,
                 maintain_order: false,
+                limit: None,
             },
         )
         .with_column(
             col(COL_TIMESTAMP)
-                .diff(1, NullBehavior::Ignore)
+                .diff(lit(1), NullBehavior::Ignore)
                 .alias(COL_DURATION),
         )
         .filter(col(COL_ENTRY_TYPE).eq(lit("out")));
@@ -164,7 +165,6 @@ pub fn generate_weekly_report(
                 closed_window: ClosedWindow::Left,
                 label: Label::Left,
                 include_boundaries: false,
-                check_sorted: true,
             },
         )
         .agg([
@@ -176,7 +176,7 @@ pub fn generate_weekly_report(
             col(RES_TOTAL_HOURS),
             (col(COL_TIMESTAMP) + lit(chrono::Duration::weeks(1))).alias(RES_WEEK_END),
             col(RES_SHIFTS),
-            (col(RES_TOTAL_HOURS) / col(RES_SHIFTS))
+            (col(RES_TOTAL_HOURS).cast(DataType::UInt64) / col(RES_SHIFTS))
                 .alias(RES_AVERAGE_SHIFT_DURATION)
                 .cast(DataType::Duration(TIME_UNIT)),
         ]);
@@ -232,16 +232,10 @@ pub fn prepare_for_display(df: LazyFrame, settings: &ReportSettings) -> LazyFram
     let map_fn = super::map_fn!(settings);
 
     df.select([
-        col(RES_WEEK_OF).map(
-            map_datetime_to_date_str,
-            GetOutput::from_type(DataType::String),
-        ),
-        col(RES_TOTAL_HOURS).map(map_fn, GetOutput::from_type(DataType::String)),
-        col(RES_WEEK_END).map(
-            map_datetime_to_date_str,
-            GetOutput::from_type(DataType::String),
-        ),
+        col(RES_WEEK_OF).map(map_datetime_to_date_str, super::coerce_output_type),
+        col(RES_TOTAL_HOURS).map(map_fn, super::coerce_output_type),
+        col(RES_WEEK_END).map(map_datetime_to_date_str, super::coerce_output_type),
         col(RES_SHIFTS),
-        col(RES_AVERAGE_SHIFT_DURATION).map(map_fn, GetOutput::from_type(DataType::String)),
+        col(RES_AVERAGE_SHIFT_DURATION).map(map_fn, super::coerce_output_type),
     ])
 }
